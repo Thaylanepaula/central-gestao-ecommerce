@@ -6,6 +6,7 @@
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -24,6 +25,148 @@
     <div id="root"></div>
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
+
+        // ── SUPABASE · sincronização Checklist + Bloco de Notas ──────────────
+        // Schema da tabela `registros_central`:
+        //   id            uuid  (default gen_random_uuid())
+        //   data_registro date
+        //   tipo_dado     text  ("checklist_done" | "checklist_obs" | "anotacoes")
+        //   conteudo      jsonb
+        //   user_id       uuid  (nullable · não usamos auth)
+        // É preciso existir um UNIQUE em (data_registro, tipo_dado) para o upsert
+        // funcionar — veja o SQL no README/chat.
+        const SUPABASE_URL = "https://uwezvczizkzmtfzlabyn.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_oQiDFX2bTKcC1Kfzsbr6EA_uxomaK9n";
+        const sb = (window.supabase && window.supabase.createClient)
+          ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+          : null;
+
+        const _hojeISO = () => new Date().toISOString().split("T")[0];
+
+        // Chaves do localStorage que devem ser espelhadas no Supabase
+        function isSupabaseSyncKey(k) {
+          if (typeof k !== "string") return false;
+          if (k === "anotacoes_laterais") return true;
+          if (k.startsWith("chk_")) return true;
+          if (k.startsWith("obs_")) return true;
+          return false;
+        }
+
+        // Monta as 3 linhas (uma por tipo_dado) com o estado de hoje
+        function _montarLinhasHoje() {
+          const dia = _hojeISO();
+          const getJSON = (k, def) => {
+            try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : def; }
+            catch { return def; }
+          };
+          const anot = getJSON("anotacoes_laterais", "");
+          return [
+            {
+              data_registro: dia,
+              tipo_dado: "checklist_done",
+              conteudo: getJSON("chk_" + dia, {}) || {},
+            },
+            {
+              data_registro: dia,
+              tipo_dado: "checklist_obs",
+              conteudo: getJSON("obs_" + dia, {}) || {},
+            },
+            {
+              data_registro: dia,
+              tipo_dado: "anotacoes",
+              conteudo: { texto: typeof anot === "string" ? anot : "" },
+            },
+          ];
+        }
+
+        // Debounce · agrupa rajadas de digitação em um único upsert
+        let _sbTimer = null;
+        let _sbPending = false;
+        function agendarSyncSupabase() {
+          if (!sb) return;
+          _sbPending = true;
+          if (_sbTimer) clearTimeout(_sbTimer);
+          _sbTimer = setTimeout(async () => {
+            _sbPending = false;
+            try {
+              const linhas = _montarLinhasHoje();
+              const { error } = await sb
+                .from("registros_central")
+                .upsert(linhas, { onConflict: "data_registro,tipo_dado" });
+              if (error) console.warn("[Supabase] upsert falhou:", error.message, error);
+            } catch (e) {
+              console.warn("[Supabase] erro no upsert:", e);
+            }
+          }, 1200); // 1.2s depois da última tecla
+        }
+        window.__agendarSyncSupabase = agendarSyncSupabase;
+
+        // Flush imediato ao fechar/trocar de aba · não perde últimas digitações
+        window.addEventListener("beforeunload", () => {
+          if (!sb || !_sbPending) return;
+          try {
+            const linhas = _montarLinhasHoje();
+            const url = SUPABASE_URL + "/rest/v1/registros_central?on_conflict=data_registro,tipo_dado";
+            const body = JSON.stringify(linhas);
+            if (navigator.sendBeacon) {
+              // sendBeacon manda como text/plain, mas o PostgREST aceita se o body for JSON válido
+              const blob = new Blob([body], { type: "application/json" });
+              navigator.sendBeacon(url, blob);
+            } else {
+              fetch(url, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "apikey": SUPABASE_ANON_KEY,
+                  "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+                  "Prefer": "resolution=merge-duplicates",
+                },
+                body,
+                keepalive: true,
+              });
+            }
+          } catch {}
+        });
+
+        // Fetch inicial · hidrata o localStorage com o registro mais recente de cada tipo
+        async function fetchSupabaseInicial() {
+          if (!sb) return;
+          try {
+            const { data, error } = await sb
+              .from("registros_central")
+              .select("data_registro, tipo_dado, conteudo")
+              .order("data_registro", { ascending: false });
+            if (error) { console.warn("[Supabase] fetch falhou:", error.message, error); return; }
+            if (!data || data.length === 0) return;
+            // Pega a linha mais recente por tipo_dado
+            const maisRecente = {};
+            for (const row of data) {
+              if (!maisRecente[row.tipo_dado]) maisRecente[row.tipo_dado] = row;
+            }
+            const dia = _hojeISO();
+            const done = maisRecente["checklist_done"];
+            const obs  = maisRecente["checklist_obs"];
+            const anot = maisRecente["anotacoes"];
+            if (done && done.conteudo && typeof done.conteudo === "object") {
+              const d = done.data_registro || dia;
+              localStorage.setItem("chk_" + d, JSON.stringify(done.conteudo));
+            }
+            if (obs && obs.conteudo && typeof obs.conteudo === "object") {
+              const d = obs.data_registro || dia;
+              localStorage.setItem("obs_" + d, JSON.stringify(obs.conteudo));
+            }
+            if (anot && anot.conteudo) {
+              const c = anot.conteudo;
+              const txt = (c && typeof c === "object" && typeof c.texto === "string")
+                ? c.texto
+                : (typeof c === "string" ? c : "");
+              localStorage.setItem("anotacoes_laterais", JSON.stringify(txt));
+            }
+          } catch (e) {
+            console.warn("[Supabase] erro no fetch inicial:", e);
+          }
+        }
+        window.__fetchSupabaseInicial = fetchSupabaseInicial;
 
         const CHECKLIST = [
   {
@@ -359,7 +502,13 @@ function useStorage(key, def) {
   const [val, setVal] = useState(() => {
     try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : def; } catch { return def; }
   });
-  const set = (v) => { setVal(v); try { localStorage.setItem(key, JSON.stringify(v)); } catch {} };
+  const set = (v) => {
+    setVal(v);
+    try { localStorage.setItem(key, JSON.stringify(v)); } catch {}
+    if (isSupabaseSyncKey(key) && typeof window.__agendarSyncSupabase === "function") {
+      window.__agendarSyncSupabase();
+    }
+  };
   return [val, set];
 }
 
@@ -4110,8 +4259,11 @@ function App() {
     </div>
   );
 }
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
+(async () => {
+  try { await window.__fetchSupabaseInicial?.(); } catch {}
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(<App />);
+})();
     </script>
 </body>
 </html>
