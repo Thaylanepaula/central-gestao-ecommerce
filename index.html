@@ -1,0 +1,4117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Central Thaylane</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        margin: 0;
+        background: #F8FAFC;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+      }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const CHECKLIST = [
+  {
+    hora: "até 9h30 · camada 1", cor: "#185FA5", bg: "#E6F1FB", badge: "#B5D4F4",
+    label: "Meta geral do e-commerce",
+    items: [
+      { id: "c1", texto: "Faturamento total vs meta geral", hint: "Sem filtro de carteira — visão do time inteiro. Estamos no ritmo ou devendo?" },
+      { id: "c2", texto: "Qual carteira está travando o total?", hint: "Se o geral está abaixo, identificar quem está puxando para baixo antes de entrar no detalhe." },
+    ]
+  },
+  {
+    hora: "até 9h30 · camada 2", cor: "#27500A", bg: "#EAF3DE", badge: "#C0DD97",
+    label: "Eletro — profundidade",
+    items: [
+      { id: "c3", texto: "Checar matriz de competitividade", hint: "Algum ar ou TV fora de preço? Se sim → aciona o comprador agora." },
+      { id: "c4", texto: "Rodar query de top SKUs de eletro", hint: "SQL Developer → query top 10 do dia → compradores 18877, 19364, 29057." },
+      { id: "c5", texto: "Tem SKU fora do ar ou com problema?", hint: "Nível de segurança → ERP → mix → atributos → PUBLICA." },
+    ]
+  },
+  {
+    hora: "até 9h30 · camada 3", cor: "#534AB7", bg: "#EEEDFE", badge: "#CECBF6",
+    label: "Metais — diagnóstico rápido com Amanda",
+    items: [
+      { id: "c6", texto: "Metais está crescendo vs ano anterior?", hint: "Se não está crescendo → identificar categoria ofensora e acionar Amanda." },
+      { id: "c7", texto: "Tem ruptura em metais?", hint: "Checar % indisponíveis. Chuveiros, fechaduras e filtros são os mais críticos." },
+      { id: "c8", texto: "Tem SKU ofensor travando a carteira?", hint: "Se sim → acionar Amanda com o SKU e a causa. Se tudo ok → fecha em 1 min." },
+    ]
+  },
+  {
+    hora: "até 9h30", cor: "#27500A", bg: "#EAF3DE", badge: "#C0DD97",
+    label: "Daily pulse",
+    items: [
+      { id: "c9", texto: "Mandar daily pulse no Teams", hint: "Foco · risco · número. Antes das 9h30 — esse não pula." },
+    ]
+  },
+  {
+    hora: "11h", cor: "#633806", bg: "#FAEEDA", badge: "#FAC775",
+    label: "Checagem de meio dia",
+    items: [
+      { id: "c10", texto: "Faturamento no ritmo?", hint: "Queda > 20% do esperado → aciona comprador da categoria afetada." },
+      { id: "c11", texto: "JIRA novo para alimentar?", hint: "Gio avisa no chat. Se tiver → pegar SKU e preço com comprador." },
+    ]
+  },
+  {
+    hora: "14h", cor: "#0C6170", bg: "#DDF1F1", badge: "#9FD4D4",
+    label: "Monitoramento de share — olhar pra fora",
+    items: [
+      { id: "c12a", texto: "Comparar preço do SKU Top 1 vs. principal concorrente (Amazon/ML)", hint: "Às 14h em ponto. Se estou ≥ 3% acima → aciona comprador antes do pico da tarde." },
+      { id: "c12b", texto: "Checar se algum concorrente rodou promoção relâmpago hoje", hint: "Olhar os 3 top SKUs da carteira. Preço caiu na Amazon/ML sem eu saber? → registra e diagnostica." },
+      { id: "c12c", texto: "Se perdi share, o que explica? (preço · estoque · mídia)", hint: "Não leva só o problema — leva a hipótese. É isso que separa jr de pleno." },
+    ]
+  },
+  {
+    hora: "14h · camada 4", cor: "#534AB7", bg: "#EEEDFE", badge: "#CECBF6",
+    label: "Inteligência de mercado",
+    items: [
+      { id: "c_im1", texto: "Comparar preço do Top 1 SKU com a Amazon", hint: "Entrar no PDP da Amazon, bater com o nosso. Diferença > 3%? → print + acionar comprador com screenshot." },
+      { id: "c_im2", texto: "Frete do concorrente está mais agressivo em Recife?", hint: "CEP PE no checkout deles. Se chega mais rápido ou mais barato → registra no diário, pauta de logística." },
+      { id: "c_im3", texto: "Banner da categoria de Beleza está ativo na home?", hint: "Confere home + categoria. Se caiu → aciona MKT direto, não espera o weekly." },
+    ]
+  },
+  {
+    hora: "15h", cor: "#791F1F", bg: "#FCEBEB", badge: "#F09595",
+    label: "Verificação de emergência",
+    items: [
+      { id: "c12", texto: "Anúncios Google acima de 100?", hint: "Acima de 100 → acionar mídia antes de perder o fim do dia." },
+      { id: "c13", texto: "Concorrência baixou preço em alguma categoria?", hint: "Diagnosticar: preço, estoque ou mídia? → acionar comprador com diagnóstico pronto." },
+    ]
+  },
+  {
+    hora: "17h", cor: "#444441", bg: "#F1EFE8", badge: "#D3D1C7",
+    label: "Fechamento",
+    items: [
+      { id: "c14", texto: "Como fechou o dia vs meta?", hint: "Anotar o número — vai para o report de sexta." },
+      { id: "c15", texto: "Aconteceu algo para registrar?", hint: "Identifiquei X → agi com Y → resultado Z. Guarda nas evidências." },
+    ]
+  },
+];
+
+const QUERIES = [
+  {
+    id: "q1", label: "Top 10 do dia", badge: "diário", badgeCor: "#185FA5", badgeBg: "#E6F1FB",
+    hint: "Toda manhã antes do daily pulse",
+    sql: `SELECT P.CODIGO, P.DESCRICAO,
+    ROUND(SUM(I.QUANTIDADE)) AS QTDE,
+    ROUND(SUM(I.PRECO * I.QUANTIDADE)) AS VALOR_VENDIDO,
+    ROUND(COUNT(DISTINCT I.ID_CARRINHO)) AS PEDIDOS,
+    Y.NOME AS COMPRADOR
+FROM PROD P
+INNER JOIN SFC_CARRINHO_ITEM I ON I.PRODUTO = P.CODIGO
+INNER JOIN AGTC Y ON P.COMPRADOR = Y.CODIGO
+WHERE I.STATUS_PEDIDO IN (0,251,95,114,14,18,7,13,3,25,71)
+  AND TRUNC(I.DT_CRIACAO) = TRUNC(SYSDATE)
+  AND Y.CODIGO IN (18877, 19364, 29057)
+GROUP BY P.CODIGO, P.DESCRICAO, Y.NOME
+ORDER BY VALOR_VENDIDO DESC
+FETCH FIRST 10 ROWS ONLY;`
+  },
+  {
+    id: "q2", label: "Faturamento por comprador", badge: "diário", badgeCor: "#185FA5", badgeBg: "#E6F1FB",
+    hint: "Qual carteira está puxando ou travando",
+    sql: `SELECT Y.NOME AS COMPRADOR,
+    ROUND(SUM(I.PRECO * I.QUANTIDADE)) AS VALOR_VENDIDO,
+    ROUND(COUNT(DISTINCT I.ID_CARRINHO)) AS PEDIDOS,
+    ROUND(COUNT(DISTINCT P.CODIGO)) AS SKUs_DISTINTOS
+FROM PROD P
+INNER JOIN SFC_CARRINHO_ITEM I ON I.PRODUTO = P.CODIGO
+INNER JOIN AGTC Y ON P.COMPRADOR = Y.CODIGO
+WHERE I.STATUS_PEDIDO IN (0,251,95,114,14,18,7,13,3,25,71)
+  AND TRUNC(I.DT_CRIACAO) = TRUNC(SYSDATE)
+  AND Y.CODIGO IN (18877, 19364, 29057)
+GROUP BY Y.NOME
+ORDER BY VALOR_VENDIDO DESC;`
+  },
+  {
+    id: "q3", label: "Alerta de ruptura", badge: "preventivo", badgeCor: "#A32D2D", badgeBg: "#FCEBEB",
+    hint: "SKUs que venderam nos últimos 7 dias mas zeraram hoje",
+    sql: `SELECT P.CODIGO, P.DESCRICAO, Y.NOME AS COMPRADOR,
+    ROUND(SUM(I.PRECO * I.QUANTIDADE)) AS VALOR_7_DIAS,
+    MAX(TRUNC(I.DT_CRIACAO)) AS ULTIMA_VENDA
+FROM PROD P
+INNER JOIN SFC_CARRINHO_ITEM I ON I.PRODUTO = P.CODIGO
+INNER JOIN AGTC Y ON P.COMPRADOR = Y.CODIGO
+WHERE I.STATUS_PEDIDO IN (0,251,95,114,14,18,7,13,3,25,71)
+  AND TRUNC(I.DT_CRIACAO) BETWEEN TRUNC(SYSDATE)-7 AND TRUNC(SYSDATE)-1
+  AND Y.CODIGO IN (18877, 19364, 29057)
+  AND P.CODIGO NOT IN (
+    SELECT DISTINCT I2.PRODUTO FROM SFC_CARRINHO_ITEM I2
+    WHERE I2.STATUS_PEDIDO IN (0,251,95,114,14,18,7,13,3,25,71)
+      AND TRUNC(I2.DT_CRIACAO) = TRUNC(SYSDATE)
+  )
+GROUP BY P.CODIGO, P.DESCRICAO, Y.NOME
+ORDER BY VALOR_7_DIAS DESC
+FETCH FIRST 15 ROWS ONLY;`
+  },
+  {
+    id: "q4", label: "Top da semana", badge: "semanal", badgeCor: "#854F0B", badgeBg: "#FAEEDA",
+    hint: "Toda sexta para o report semanal",
+    sql: `SELECT P.CODIGO, P.DESCRICAO, Y.NOME AS COMPRADOR,
+    ROUND(SUM(I.QUANTIDADE)) AS QTDE,
+    ROUND(SUM(I.PRECO * I.QUANTIDADE)) AS VALOR_VENDIDO,
+    ROUND(AVG(I.PRECO), 2) AS PRECO_MEDIO
+FROM PROD P
+INNER JOIN SFC_CARRINHO_ITEM I ON I.PRODUTO = P.CODIGO
+INNER JOIN AGTC Y ON P.COMPRADOR = Y.CODIGO
+WHERE I.STATUS_PEDIDO IN (0,251,95,114,14,18,7,13,3,25,71)
+  AND TRUNC(I.DT_CRIACAO) >= TRUNC(SYSDATE) - 7
+  AND TRUNC(I.DT_CRIACAO) < TRUNC(SYSDATE)
+  AND Y.CODIGO IN (18877, 19364, 29057)
+GROUP BY P.CODIGO, P.DESCRICAO, Y.NOME
+ORDER BY VALOR_VENDIDO DESC
+FETCH FIRST 15 ROWS ONLY;`
+  },
+  {
+    id: "q5", label: "Elasticidade de preço (semana vs semana)", badge: "estratégico", badgeCor: "#0C6170", badgeBg: "#DDF1F1",
+    hint: "Se o preço caiu 5%, o volume subiu quanto? Leitura de negócio para o comprador",
+    sql: `WITH SEMANA_ATUAL AS (
+  SELECT P.CODIGO, P.DESCRICAO,
+      ROUND(AVG(I.PRECO), 2) AS PRECO,
+      ROUND(SUM(I.QUANTIDADE)) AS QTDE
+  FROM PROD P
+  INNER JOIN SFC_CARRINHO_ITEM I ON I.PRODUTO = P.CODIGO
+  INNER JOIN AGTC Y ON P.COMPRADOR = Y.CODIGO
+  WHERE I.STATUS_PEDIDO IN (0,251,95,114,14,18,7,13,3,25,71)
+    AND TRUNC(I.DT_CRIACAO) >= TRUNC(SYSDATE) - 7
+    AND TRUNC(I.DT_CRIACAO) <  TRUNC(SYSDATE)
+    AND Y.CODIGO IN (18877, 19364, 29057)
+  GROUP BY P.CODIGO, P.DESCRICAO
+),
+SEMANA_ANT AS (
+  SELECT P.CODIGO,
+      ROUND(AVG(I.PRECO), 2) AS PRECO,
+      ROUND(SUM(I.QUANTIDADE)) AS QTDE
+  FROM PROD P
+  INNER JOIN SFC_CARRINHO_ITEM I ON I.PRODUTO = P.CODIGO
+  INNER JOIN AGTC Y ON P.COMPRADOR = Y.CODIGO
+  WHERE I.STATUS_PEDIDO IN (0,251,95,114,14,18,7,13,3,25,71)
+    AND TRUNC(I.DT_CRIACAO) >= TRUNC(SYSDATE) - 14
+    AND TRUNC(I.DT_CRIACAO) <  TRUNC(SYSDATE) - 7
+    AND Y.CODIGO IN (18877, 19364, 29057)
+  GROUP BY P.CODIGO
+)
+SELECT A.CODIGO, A.DESCRICAO,
+    B.PRECO AS PRECO_SEM_ANT,
+    A.PRECO AS PRECO_SEM_ATUAL,
+    ROUND(((A.PRECO - B.PRECO) / B.PRECO) * 100, 2) AS VAR_PRECO_PCT,
+    B.QTDE  AS QTDE_SEM_ANT,
+    A.QTDE  AS QTDE_SEM_ATUAL,
+    ROUND(((A.QTDE  - B.QTDE)  / B.QTDE)  * 100, 2) AS VAR_QTDE_PCT,
+    ROUND(
+      ((A.QTDE  - B.QTDE)  / B.QTDE) /
+      NULLIF((A.PRECO - B.PRECO) / B.PRECO, 0)
+    , 2) AS ELASTICIDADE
+FROM SEMANA_ATUAL A
+INNER JOIN SEMANA_ANT B ON A.CODIGO = B.CODIGO
+WHERE B.PRECO > 0
+  AND B.QTDE  > 0
+  AND A.PRECO <> B.PRECO
+ORDER BY A.QTDE DESC
+FETCH FIRST 15 ROWS ONLY;`
+  },
+  {
+    id: "q6", label: "Alerta de anomalia (hoje vs média 15d)", badge: "crítico", badgeCor: "#791F1F", badgeBg: "#F09595",
+    hint: "SKUs zerados hoje que vendem muito — ou quedas bruscas vs média recente",
+    sql: `WITH MEDIA_15D AS (
+  SELECT P.CODIGO, P.DESCRICAO, Y.NOME AS COMPRADOR,
+      ROUND(AVG(VD.VALOR_DIA), 2) AS MEDIA_DIARIA_RS,
+      ROUND(AVG(VD.QTDE_DIA), 2)  AS MEDIA_DIARIA_QTDE,
+      COUNT(VD.DIA)               AS DIAS_COM_VENDA
+  FROM PROD P
+  INNER JOIN AGTC Y ON P.COMPRADOR = Y.CODIGO
+  INNER JOIN (
+    SELECT I.PRODUTO,
+        TRUNC(I.DT_CRIACAO)       AS DIA,
+        SUM(I.PRECO * I.QUANTIDADE) AS VALOR_DIA,
+        SUM(I.QUANTIDADE)         AS QTDE_DIA
+    FROM SFC_CARRINHO_ITEM I
+    WHERE I.STATUS_PEDIDO IN (0,251,95,114,14,18,7,13,3,25,71)
+      AND TRUNC(I.DT_CRIACAO) >= TRUNC(SYSDATE) - 15
+      AND TRUNC(I.DT_CRIACAO) <  TRUNC(SYSDATE)
+    GROUP BY I.PRODUTO, TRUNC(I.DT_CRIACAO)
+  ) VD ON VD.PRODUTO = P.CODIGO
+  WHERE Y.CODIGO IN (18877, 19364, 29057)
+  GROUP BY P.CODIGO, P.DESCRICAO, Y.NOME
+),
+HOJE AS (
+  SELECT I.PRODUTO,
+      ROUND(SUM(I.PRECO * I.QUANTIDADE), 2) AS VALOR_HOJE,
+      ROUND(SUM(I.QUANTIDADE))              AS QTDE_HOJE
+  FROM SFC_CARRINHO_ITEM I
+  WHERE I.STATUS_PEDIDO IN (0,251,95,114,14,18,7,13,3,25,71)
+    AND TRUNC(I.DT_CRIACAO) = TRUNC(SYSDATE)
+  GROUP BY I.PRODUTO
+)
+SELECT M.CODIGO, M.DESCRICAO, M.COMPRADOR,
+    M.MEDIA_DIARIA_RS,
+    NVL(H.VALOR_HOJE, 0)                                  AS VALOR_HOJE,
+    ROUND(NVL(H.VALOR_HOJE, 0) - M.MEDIA_DIARIA_RS, 2)    AS GAP_RS,
+    ROUND(((NVL(H.VALOR_HOJE, 0) - M.MEDIA_DIARIA_RS)
+           / M.MEDIA_DIARIA_RS) * 100, 2)                 AS GAP_PCT,
+    CASE
+      WHEN NVL(H.VALOR_HOJE, 0) = 0 AND M.MEDIA_DIARIA_RS >= 500 THEN 'ZERADO · ALTO RISCO'
+      WHEN NVL(H.VALOR_HOJE, 0) = 0                              THEN 'ZERADO'
+      WHEN NVL(H.VALOR_HOJE, 0) < M.MEDIA_DIARIA_RS * 0.3        THEN 'QUEDA > 70%'
+      WHEN NVL(H.VALOR_HOJE, 0) < M.MEDIA_DIARIA_RS * 0.5        THEN 'QUEDA > 50%'
+      ELSE 'NORMAL'
+    END AS SEVERIDADE
+FROM MEDIA_15D M
+LEFT JOIN HOJE H ON H.PRODUTO = M.CODIGO
+WHERE M.MEDIA_DIARIA_RS > 0
+  AND M.DIAS_COM_VENDA  >= 3
+  AND NVL(H.VALOR_HOJE, 0) < M.MEDIA_DIARIA_RS * 0.5
+ORDER BY
+    CASE WHEN NVL(H.VALOR_HOJE, 0) = 0 THEN 0 ELSE 1 END,
+    M.MEDIA_DIARIA_RS DESC
+FETCH FIRST 20 ROWS ONLY;`
+  },
+];
+
+// Fluxo de Comando · 3 seções verticais ancoradas no horário
+const SECOES = [
+  {
+    id: "abertura",
+    horario: "09:30",
+    titulo: "Diagnóstico de Abertura",
+    subtitulo: "Faturamento · alertas de ruptura",
+    accent: "#185FA5",
+    bg: "#E6F1FB",
+    blocos: ["até 9h30 · camada 1", "até 9h30 · camada 2", "até 9h30 · camada 3", "até 9h30", "11h"],
+    queries: ["q1", "q2", "q3", "q6"],
+  },
+  {
+    id: "rota",
+    horario: "14:00",
+    titulo: "Ajuste de Rota",
+    subtitulo: "Share · inteligência de mercado",
+    accent: "#854F0B",
+    bg: "#FAEEDA",
+    blocos: ["14h", "14h · camada 4", "15h"],
+    queries: ["q5"],
+  },
+  {
+    id: "consolidacao",
+    horario: "17:00",
+    titulo: "Consolidação de Resultado",
+    subtitulo: "Fechamento · diário de impacto",
+    accent: "#534AB7",
+    bg: "#EEEDFE",
+    blocos: ["17h"],
+    queries: ["q4"],
+    incluiDiario: true,
+  },
+];
+
+function secaoAgora() {
+  const h = new Date().getHours() + new Date().getMinutes() / 60;
+  if (h < 12)    return "abertura";
+  if (h < 16.5) return "rota";
+  return "consolidacao";
+}
+
+// Status colors · border-left metódico
+const STATUS = {
+  concluido:  "#639922", // Verde · Concluído
+  analise:    "#3B82F6", // Azul · Em análise
+  aguardando: "#E5E7EB", // Cinza claro · Aguardando
+};
+
+// Mapa · item do checklist → query SQL associada (ferramenta relacionada)
+const CHECKLIST_QUERY_MAP = {
+  c1:    "q2", // Faturamento total vs meta geral → Faturamento por comprador
+  c2:    "q2", // Qual carteira está travando → Faturamento por comprador
+  c4:    "q1", // Top SKUs de eletro → Top 10 do dia
+  c5:    "q3", // SKU fora do ar → Alerta de ruptura
+  c6:    "q4", // Metais crescendo? → Top da semana
+  c7:    "q3", // Ruptura em metais → Alerta de ruptura
+  c8:    "q6", // SKU ofensor → Alerta de anomalia
+  c10:   "q2", // Faturamento no ritmo → Faturamento por comprador
+  c12a:  "q1", // Comparar preço Top 1 → Top 10 do dia
+  c12b:  "q5", // Promoção relâmpago → Elasticidade de preço
+  c12c:  "q6", // Perdi share → Alerta de anomalia
+  c_im1: "q1", // Comparar com Amazon → Top 10 do dia
+  c13:   "q5", // Concorrência baixou preço → Elasticidade de preço
+  c14:   "q2", // Como fechou o dia → Faturamento por comprador
+};
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+
+const today = () => new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
+const todayKey = () => new Date().toISOString().split("T")[0];
+
+function useStorage(key, def) {
+  const [val, setVal] = useState(() => {
+    try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : def; } catch { return def; }
+  });
+  const set = (v) => { setVal(v); try { localStorage.setItem(key, JSON.stringify(v)); } catch {} };
+  return [val, set];
+}
+
+// snapshotMeta · tira uma foto do Cockpit no instante em que o Diário é salvo
+// Retorna null só quando não há nem venda nem meta preenchidos
+function snapshotMeta(venda, meta) {
+  const v = (typeof venda === "number" && !isNaN(venda)) ? venda : null;
+  const m = (typeof meta === "number" && !isNaN(meta)) ? meta : null;
+  if (v === null && m === null) return null;
+  const gap = (v !== null && m !== null) ? Math.max(0, m - v) : null;
+  const pctMeta = (v !== null && m !== null && m > 0) ? (v / m) * 100 : null;
+  const metaBatida = (v !== null && m !== null && v >= m);
+  return { venda: v, meta: m, gap, pctMeta, metaBatida };
+}
+
+// historicoVendas · série temporal de faturamento x meta, um registro por dia (upsert)
+// shape: [{ data: "YYYY-MM-DD", valor: number|null, meta: number|null, atualizadoEm: ISOString }, ...]
+function salvarHistoricoVendas(valor, meta) {
+  if (valor === null && meta === null) return null;
+  const data = todayKey();
+  let hist = [];
+  try {
+    const raw = localStorage.getItem("historicoVendas");
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(parsed)) hist = parsed;
+  } catch {}
+  const registro = { data, valor, meta, atualizadoEm: new Date().toISOString() };
+  const idx = hist.findIndex(r => r && r.data === data);
+  if (idx >= 0) hist[idx] = registro; else hist.push(registro);
+  hist.sort((a, b) => (a.data || "").localeCompare(b.data || ""));
+  try { localStorage.setItem("historicoVendas", JSON.stringify(hist)); } catch {}
+  return hist;
+}
+
+// ── COMPONENTES BASE ─────────────────────────────────────────────────────────
+
+const EASE = "cubic-bezier(0.4, 0, 0.2, 1)";
+const TRANSITION = "all 0.3s " + EASE;
+
+function Btn({ onClick, children, primary, small, disabled }) {
+  const [hover, setHover] = useState(false);
+  const bgBase = disabled ? "#e0e0e0" : primary ? "#111" : "transparent";
+  const bgHover = disabled ? "#e0e0e0" : primary ? "#2A2A2A" : "rgba(15, 23, 42, 0.04)";
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => !disabled && setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        fontFamily: "'Inter', sans-serif",
+        fontSize: small ? 12 : 13, fontWeight: 500,
+        padding: small ? "5px 12px" : "9px 18px",
+        borderRadius: 9, cursor: disabled ? "default" : "pointer",
+        border: primary ? "none" : "0.5px solid " + (hover && !disabled ? "#94A3B8" : "#d0cfc8"),
+        background: hover && !disabled ? bgHover : bgBase,
+        color: disabled ? "#aaa" : primary ? "#fff" : hover ? "#111" : "#555",
+        transform: hover && !disabled ? "translateY(-1px)" : "translateY(0)",
+        transition: TRANSITION,
+      }}
+    >{children}</button>
+  );
+}
+
+function Tab({ label, active, onClick, dot }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        fontFamily: "'Inter', sans-serif",
+        fontSize: 13, fontWeight: 500,
+        padding: "7px 16px", borderRadius: 20,
+        border: active ? "none" : "0.5px solid " + (hover ? "#94A3B8" : "#d0cfc8"),
+        background: active ? "#111" : hover ? "rgba(15, 23, 42, 0.04)" : "transparent",
+        color: active ? "#fff" : hover ? "#111" : "#888",
+        cursor: "pointer", position: "relative",
+        transition: TRANSITION,
+      }}
+    >
+      {label}
+      {dot && <span style={{ position: "absolute", top: 4, right: 4, width: 7, height: 7, borderRadius: "50%", background: "#E24B4A", transition: TRANSITION }} />}
+    </button>
+  );
+}
+
+// ── SEÇÃO: CHECKLIST ─────────────────────────────────────────────────────────
+
+function baseDaHora(hora) {
+  if (hora.includes("9h30")) return "9h30";
+  if (hora.startsWith("11h")) return "11h";
+  if (hora.startsWith("14h")) return "14h";
+  if (hora.startsWith("15h")) return "15h";
+  if (hora.startsWith("17h")) return "17h";
+  return null;
+}
+
+function baseAtualAgora() {
+  const h = new Date().getHours() + new Date().getMinutes() / 60;
+  if (h < 10) return "9h30";
+  if (h < 12.5) return "11h";
+  if (h < 14.5) return "14h";
+  if (h < 16) return "15h";
+  return "17h";
+}
+
+function QueryModal({ query, onClose }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  if (!query) return null;
+
+  const copy = () => {
+    navigator.clipboard.writeText(query.sql).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0,
+      background: "rgba(15, 23, 42, 0.45)",
+      backdropFilter: "blur(6px)",
+      WebkitBackdropFilter: "blur(6px)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      zIndex: 100, padding: 24,
+      fontFamily: "'Inter', sans-serif",
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: "#fff", borderRadius: 22,
+        maxWidth: 780, width: "100%", maxHeight: "85vh",
+        display: "flex", flexDirection: "column",
+        boxShadow: "0 24px 60px rgba(15, 23, 42, 0.28)",
+        overflow: "hidden",
+      }}>
+        <div style={{ padding: "18px 22px 14px", borderBottom: "0.5px solid #e5e7eb" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+            <span style={{ fontSize: 10, fontWeight: 600, padding: "3px 9px", borderRadius: 4, background: query.badgeBg, color: query.badgeCor, letterSpacing: "0.04em", textTransform: "uppercase" }}>{query.badge}</span>
+            <span style={{ fontSize: 15, fontWeight: 600, color: "#111", letterSpacing: "-0.01em" }}>{query.label}</span>
+            <button onClick={onClose} aria-label="Fechar" style={{ marginLeft: "auto", fontSize: 22, color: "#9ca3af", background: "none", border: "none", cursor: "pointer", padding: "0 4px", lineHeight: 1 }}>×</button>
+          </div>
+          <div style={{ fontSize: 12, color: "#6b7280" }}>{query.hint}</div>
+        </div>
+        <div style={{ flex: 1, overflow: "auto", background: "#0F172A" }}>
+          <pre style={{
+            margin: 0, padding: "16px 22px",
+            fontSize: 12, lineHeight: 1.6,
+            color: "#E2E8F0",
+            fontFamily: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+            whiteSpace: "pre-wrap", wordBreak: "break-word",
+          }}>{query.sql}</pre>
+        </div>
+        <div style={{ padding: "12px 18px", borderTop: "0.5px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+          <Btn small onClick={onClose}>Fechar</Btn>
+          <Btn primary small onClick={copy}>{copied ? "SQL copiado ✓" : "Copiar SQL"}</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SecaoChecklist({ filterBloco, minimal, usadas, setUsadas, done, setDone, obs, setObs } = {}) {
+  // Estado elevado: done/setDone e obs/setObs vêm do App (fonte única de verdade)
+  // para evitar que múltiplas instâncias desta seção sobrescrevam o localStorage
+  // umas das outras quando montadas em paralelo no Painel.
+  const [expanded, setExpanded] = useState({});
+  const [copiedId, setCopiedId] = useState(null);
+  const [resumoCopiado, setResumoCopiado] = useState(false);
+
+  const blocos = filterBloco ? CHECKLIST.filter(filterBloco) : CHECKLIST;
+  const itens = blocos.flatMap(b => b.items);
+  const total = itens.length;
+  const count = itens.filter(it => !!done[it.id]).length;
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const baseAtual = baseAtualAgora();
+
+  const toggle = (id) => setDone({ ...done, [id]: !done[id] });
+  const reset = () => setDone({});
+  const setObservacao = (id, texto) => setObs({ ...obs, [id]: texto });
+  // Observação: como done/obs agora vêm do App, todas as instâncias paralelas
+  // compartilham o mesmo objeto — não há mais risco de sobrescrita cruzada.
+
+  const copiarResumoDoDia = () => {
+    const todosItens = CHECKLIST.flatMap(b => b.items);
+    const linhas = todosItens
+      .map(it => {
+        const texto = (obs[it.id] || "").trim();
+        if (!texto) return null;
+        return `Tarefa: ${it.texto} - Obs: ${texto}`;
+      })
+      .filter(Boolean);
+    const cabecalho = `Resumo do dia · ${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}`;
+    const corpo = linhas.length > 0 ? linhas.join("\n") : "Nenhuma observação registrada hoje.";
+    const conteudo = cabecalho + "\n\n" + corpo;
+    navigator.clipboard.writeText(conteudo).then(() => {
+      setResumoCopiado(true);
+      setTimeout(() => setResumoCopiado(false), 2500);
+    });
+  };
+
+  const toggleQuery = (itemId, queryId) => {
+    const abrindo = !expanded[itemId];
+    setExpanded({ ...expanded, [itemId]: abrindo });
+    if (abrindo && setUsadas && usadas && !usadas[queryId]) {
+      setUsadas({ ...usadas, [queryId]: Date.now() });
+    }
+  };
+
+  const copiar = (queryId, sql) => {
+    navigator.clipboard.writeText(sql).then(() => {
+      setCopiedId(queryId);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  };
+
+  return (
+    <div style={{ maxWidth: 640, margin: "0 auto" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 8, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 12, color: "#888" }}>{count} de {total} itens · {pct}% do dia concluído</span>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            onClick={copiarResumoDoDia}
+            style={{
+              fontFamily: "'Inter', sans-serif",
+              fontSize: 12, fontWeight: 500,
+              padding: "5px 12px", borderRadius: 9,
+              border: "0.5px solid " + (resumoCopiado ? "#166534" : "#d0cfc8"),
+              background: resumoCopiado ? "#DCFCE7" : "transparent",
+              color: resumoCopiado ? "#166534" : "#333",
+              cursor: "pointer",
+              display: "inline-flex", alignItems: "center", gap: 6,
+              transition: TRANSITION,
+            }}
+            title="Copia todas as observações preenchidas no formato: Tarefa: [Nome] - Obs: [Texto]"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            {resumoCopiado ? "Resumo copiado ✓" : "Copiar Resumo do Dia"}
+          </button>
+          <Btn small onClick={reset}>Reiniciar</Btn>
+        </div>
+      </div>
+      <div style={{ height: 4, background: "#eee", borderRadius: 2, marginBottom: 26 }}>
+        <div style={{ height: 4, width: pct + "%", background: pct === 100 ? "#639922" : "#111", borderRadius: 2, transition: "width 0.3s " + EASE }} />
+      </div>
+
+      {pct === 100 && (
+        <div style={{ background: "#EAF3DE", border: "0.5px solid #97C459", borderRadius: 10, padding: "10px 14px", marginBottom: 20, fontSize: 13, color: "#27500A", fontWeight: 500, textAlign: "center" }}>
+          Rotina completa — você está operando como analista pleno.
+        </div>
+      )}
+
+      <div style={{ position: "relative", paddingLeft: 38 }}>
+        <div style={{ position: "absolute", left: 13, top: 10, bottom: 10, width: 2, background: "#e5e7eb", borderRadius: 1 }} />
+
+        {blocos.length === 0 && (
+          <div style={{ fontSize: 12, color: "#bbb", fontStyle: "italic", marginLeft: -10 }}>
+            Nenhum item nesta fase.
+          </div>
+        )}
+
+        {blocos.map((bloco, i) => {
+          const ehAgora = baseDaHora(bloco.hora) === baseAtual;
+          const itensBloco = bloco.items.length;
+          const feitosBloco = bloco.items.filter(it => !!done[it.id]).length;
+          const blocoCompleto = itensBloco > 0 && feitosBloco === itensBloco;
+
+          return (
+            <div key={bloco.hora}>
+              <div style={{ position: "relative", marginTop: i === 0 ? 0 : 26, marginBottom: 14 }}>
+                <div style={{
+                  position: "absolute", left: -38, top: -2,
+                  width: 28, height: 28, borderRadius: "50%",
+                  background: blocoCompleto ? bloco.cor : bloco.bg,
+                  border: "2px solid " + bloco.cor,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: ehAgora ? "0 0 0 4px " + bloco.badge : "none",
+                  transition: "all 0.3s " + EASE,
+                  zIndex: 2,
+                }}>
+                  {blocoCompleto ? (
+                    <svg width="12" height="10" viewBox="0 0 10 8"><polyline points="1,4 3.5,6.5 9,1" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  ) : (
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: bloco.cor }} />
+                  )}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 10.5, fontWeight: 600, padding: "3px 9px", borderRadius: 4, background: bloco.badge, color: bloco.cor, whiteSpace: "nowrap", letterSpacing: "0.02em" }}>{bloco.hora}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: bloco.cor, letterSpacing: "-0.005em" }}>{bloco.label}</span>
+                  {ehAgora && (
+                    <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: bloco.cor, color: "#fff", letterSpacing: "0.04em", textTransform: "uppercase" }}>agora</span>
+                  )}
+                  <span style={{ marginLeft: "auto", fontSize: 11, color: "#bbb", fontVariantNumeric: "tabular-nums" }}>{feitosBloco}/{itensBloco}</span>
+                </div>
+              </div>
+
+              {bloco.items.map((item) => {
+                const feito = !!done[item.id];
+                const queryId = CHECKLIST_QUERY_MAP[item.id];
+                const status = feito ? "concluido" : ehAgora ? "analise" : "aguardando";
+                return (
+                  <div key={item.id} style={{ position: "relative", marginBottom: 10 }}>
+                    <div
+                      onClick={() => toggle(item.id)}
+                      role="checkbox"
+                      aria-checked={feito}
+                      style={{
+                        position: "absolute", left: -38, top: 10,
+                        width: 28, height: 28, borderRadius: "50%",
+                        background: feito ? "#639922" : "#fff",
+                        border: "2px solid " + (feito ? "#639922" : "#d1d5db"),
+                        cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        transition: "all 0.25s " + EASE,
+                        zIndex: 2,
+                      }}
+                    >
+                      {feito && <svg width="12" height="10" viewBox="0 0 10 8"><polyline points="1,4 3.5,6.5 9,1" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                    </div>
+                    <div style={{
+                      background: feito ? "#F9FAFB" : "#fff",
+                      border: "0.5px solid #e5e7eb",
+                      borderLeft: "3px solid " + STATUS[status],
+                      borderRadius: 12, padding: "10px 14px 10px 13px",
+                      opacity: feito ? 0.55 : 1,
+                      transition: "all 0.25s " + EASE,
+                    }}>
+                      <div
+                        onClick={() => toggle(item.id)}
+                        style={{
+                          cursor: "pointer",
+                          fontSize: 13,
+                          color: feito ? "#9ca3af" : "#111",
+                          textDecoration: feito ? "line-through" : "none",
+                          lineHeight: 1.5,
+                          fontWeight: 500,
+                          letterSpacing: "-0.005em",
+                        }}>{item.texto}</div>
+                      {!feito && !minimal && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4, lineHeight: 1.5 }}>{item.hint}</div>}
+                      <input
+                        type="text"
+                        value={obs[item.id] || ""}
+                        onChange={(e) => setObservacao(item.id, e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        placeholder="O que você observou?"
+                        style={{
+                          marginTop: 8,
+                          width: "100%",
+                          boxSizing: "border-box",
+                          border: "0.5px solid " + ((obs[item.id] || "").trim() ? "#94A3B8" : "#e5e7eb"),
+                          borderRadius: 8,
+                          padding: "7px 10px",
+                          fontSize: 12,
+                          color: "#111",
+                          fontFamily: "'Inter', sans-serif",
+                          background: (obs[item.id] || "").trim() ? "#FFFBEB" : "#FAFAF8",
+                          outline: "none",
+                          transition: "all 0.2s " + EASE,
+                        }}
+                        onFocus={(e) => { e.currentTarget.style.borderColor = "#111"; e.currentTarget.style.background = "#fff"; }}
+                        onBlur={(e) => {
+                          const tem = (obs[item.id] || "").trim();
+                          e.currentTarget.style.borderColor = tem ? "#94A3B8" : "#e5e7eb";
+                          e.currentTarget.style.background = tem ? "#FFFBEB" : "#FAFAF8";
+                        }}
+                      />
+                      {!feito && queryId && (() => {
+                        const q = QUERIES.find(qq => qq.id === queryId);
+                        const aberta = !!expanded[item.id];
+                        const foiCopiada = copiedId === queryId;
+                        return (
+                          <div style={{ marginTop: 10 }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleQuery(item.id, queryId); }}
+                              style={{
+                                fontSize: 11, fontWeight: 500,
+                                padding: "4px 2px", borderRadius: 0,
+                                border: "none", background: "transparent",
+                                color: aberta ? "#111" : "#64748B",
+                                cursor: "pointer",
+                                fontFamily: "'Inter', sans-serif",
+                                display: "inline-flex", alignItems: "center", gap: 6,
+                                letterSpacing: "0.005em",
+                                borderBottom: "1px solid " + (aberta ? "#111" : "transparent"),
+                                transition: "all 0.2s " + EASE,
+                              }}
+                              onMouseEnter={e => { if (!aberta) { e.currentTarget.style.color = "#111"; e.currentTarget.style.borderBottom = "1px dashed #cbd5e1"; } }}
+                              onMouseLeave={e => { if (!aberta) { e.currentTarget.style.color = "#64748B"; e.currentTarget.style.borderBottom = "1px solid transparent"; } }}
+                            >
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                                <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/>
+                                <path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/>
+                              </svg>
+                              {aberta ? "Ocultar query" : "Abrir query relacionada"}
+                            </button>
+                            {aberta && q && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                style={{
+                                  marginTop: 10,
+                                  background: "#0F172A",
+                                  borderRadius: 10,
+                                  overflow: "hidden",
+                                  border: "0.5px solid #1E293B",
+                                }}
+                              >
+                                <div style={{
+                                  display: "flex", alignItems: "center", gap: 8,
+                                  padding: "8px 12px",
+                                  borderBottom: "0.5px solid rgba(226, 232, 240, 0.08)",
+                                  background: "rgba(255, 255, 255, 0.02)",
+                                }}>
+                                  <span style={{
+                                    fontSize: 9.5, fontWeight: 600,
+                                    padding: "2px 7px", borderRadius: 3,
+                                    background: q.badgeBg, color: q.badgeCor,
+                                    letterSpacing: "0.04em", textTransform: "uppercase",
+                                  }}>{q.badge}</span>
+                                  <span style={{
+                                    fontSize: 11.5, fontWeight: 600, color: "#E2E8F0",
+                                    letterSpacing: "-0.005em",
+                                    flex: 1, minWidth: 0,
+                                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                  }}>{q.label}</span>
+                                  <button
+                                    onClick={() => copiar(queryId, q.sql)}
+                                    style={{
+                                      fontSize: 10.5, fontWeight: 600,
+                                      padding: "3px 10px", borderRadius: 999,
+                                      border: "0.5px solid " + (foiCopiada ? "#166534" : "rgba(226, 232, 240, 0.2)"),
+                                      background: foiCopiada ? "#DCFCE7" : "transparent",
+                                      color: foiCopiada ? "#166534" : "#CBD5E1",
+                                      cursor: "pointer",
+                                      fontFamily: "'Inter', sans-serif",
+                                      letterSpacing: "0.005em",
+                                      transition: "all 0.2s " + EASE,
+                                    }}
+                                  >{foiCopiada ? "copiado ✓" : "copiar"}</button>
+                                </div>
+                                <pre style={{
+                                  margin: 0, padding: "12px 14px",
+                                  fontSize: 11, lineHeight: 1.6,
+                                  color: "#E2E8F0",
+                                  fontFamily: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+                                  whiteSpace: "pre-wrap", wordBreak: "break-word",
+                                  maxHeight: 320, overflow: "auto",
+                                }}>{q.sql}</pre>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── SEÇÃO: QUERIES ───────────────────────────────────────────────────────────
+
+function IconCopy({ size = 14, color = "#94A3B8" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function IconCheck({ size = 14, color = "#166534" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function SecaoQueries() {
+  const [open, setOpen] = useState(null);
+  const [copied, setCopied] = useState(null);
+
+  const copy = (e, id, sql) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    navigator.clipboard.writeText(sql).then(() => { setCopied(id); setTimeout(() => setCopied(null), 2000); });
+  };
+
+  return (
+    <div>
+      {QUERIES.map((q) => {
+        const isOpen = open === q.id;
+        const wasCopied = copied === q.id;
+        return (
+          <div key={q.id} style={{
+            background: "rgba(255, 255, 255, 0.7)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            border: "1px solid rgba(255, 255, 255, 0.5)",
+            boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)",
+            borderRadius: 14,
+            overflow: "hidden",
+            marginBottom: 6,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px" }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: "#0F172A", flex: 1, letterSpacing: "-0.01em" }}>
+                {q.label}
+              </span>
+              <button
+                onClick={() => setOpen(isOpen ? null : q.id)}
+                style={{
+                  fontSize: 11, fontWeight: 500, color: "#64748B",
+                  background: "transparent", border: "none", cursor: "pointer",
+                  padding: "4px 6px", fontFamily: "'Inter', sans-serif",
+                  transition: TRANSITION,
+                }}
+                title={isOpen ? "Ocultar código" : "Ver código"}
+                onMouseEnter={e => { e.currentTarget.style.color = "#0F172A"; }}
+                onMouseLeave={e => { e.currentTarget.style.color = "#64748B"; }}
+              >
+                {isOpen ? "Ocultar" : "Ver Código"}
+              </button>
+              <button
+                onClick={(e) => copy(e, q.id, q.sql)}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 28, height: 28, borderRadius: 7,
+                  background: wasCopied ? "#DCFCE7" : "transparent",
+                  border: "none", cursor: "pointer",
+                  transition: TRANSITION,
+                }}
+                title={wasCopied ? "Copiado!" : "Copiar SQL"}
+                onMouseEnter={e => { if (!wasCopied) e.currentTarget.style.background = "rgba(15, 23, 42, 0.04)"; }}
+                onMouseLeave={e => { if (!wasCopied) e.currentTarget.style.background = "transparent"; }}
+              >
+                {wasCopied ? <IconCheck /> : <IconCopy />}
+              </button>
+            </div>
+            {isOpen && (
+              <div style={{ borderTop: "0.5px solid rgba(15, 23, 42, 0.06)" }}>
+                <pre style={{
+                  margin: 0, padding: "12px 14px",
+                  fontSize: 11, lineHeight: 1.7,
+                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                  color: "#334155",
+                  background: "rgba(241, 245, 249, 0.6)",
+                  overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word",
+                }}>{q.sql}</pre>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── SEÇÃO: DIÁRIO ────────────────────────────────────────────────────────────
+
+const parseBRL = (s) => {
+  if (s === null || s === undefined || s === "") return null;
+  const cleaned = String(s).replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? null : n;
+};
+const formatBRL = (n) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n);
+const formatBRLInt = (n) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(n);
+
+function SecaoDiario({ registros, setRegistros, status, historico, filtroData, rotuloPeriodo, ocultarForm }) {
+  const [oq, setOq] = useState("");
+  const [pq, setPq] = useState("");
+  const [ac, setAc] = useState("");
+  const [im, setIm] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+
+  const impactoNum = parseBRL(im);
+  const registrosVisiveis = filtroData ? registros.filter(filtroData) : registros;
+
+  const salvar = () => {
+    if (!oq && !pq && !ac && impactoNum === null) return;
+    const novo = {
+      id: Date.now(),
+      data: new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+      hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+      oq, pq, ac,
+      impacto: impactoNum,
+      metaSnapshot: snapshotMeta(parseBRL(status && status.venda), parseBRL(status && status.meta)),
+    };
+    setRegistros([novo, ...registros]);
+    setOq(""); setPq(""); setAc(""); setIm("");
+    setFormOpen(false);
+  };
+
+  const limpar = () => { setOq(""); setPq(""); setAc(""); setIm(""); };
+  const remover = (id) => setRegistros(registros.filter(r => r.id !== id));
+
+  const ultimoImpacto = registrosVisiveis.find(r => typeof r.impacto === "number" && r.impacto !== 0);
+  const agoraT = new Date();
+  const somaMes = registrosVisiveis
+    .filter(r => typeof r.impacto === "number" && new Date(r.id).getMonth() === agoraT.getMonth() && new Date(r.id).getFullYear() === agoraT.getFullYear())
+    .reduce((s, r) => s + r.impacto, 0);
+  const somaPeriodo = filtroData
+    ? registrosVisiveis
+        .filter(r => typeof r.impacto === "number")
+        .reduce((s, r) => s + r.impacto, 0)
+    : null;
+
+  const taStyle = { border: "0.5px solid #e0deda", borderRadius: 8, padding: "9px 12px", fontSize: 13, color: "#111", fontFamily: "'Inter', sans-serif", lineHeight: 1.6, outline: "none", resize: "none", background: "#FAFAF8", width: "100%", boxSizing: "border-box" };
+  const inStyle = { ...taStyle, padding: "8px 12px", lineHeight: 1.4 };
+  const tags = [
+    { tag: "O QUÊ", bg: "#FAEEDA", cor: "#854F0B", val: oq, set: setOq, ph: "O que aconteceu hoje?" },
+    { tag: "POR QUÊ", bg: "#E6F1FB", cor: "#185FA5", val: pq, set: setPq, ph: "Por que isso importa?" },
+    { tag: "AÇÃO", bg: "#EAF3DE", cor: "#3B6D11", val: ac, set: setAc, ph: "O que você fez ou vai fazer?" },
+  ];
+
+  return (
+    <div>
+      {ultimoImpacto ? (
+        <div style={{
+          background: ultimoImpacto.impacto >= 0 ? "#EAF3DE" : "#FCEBEB",
+          border: "0.5px solid " + (ultimoImpacto.impacto >= 0 ? "#C0DD97" : "#F09595"),
+          borderRadius: 18, padding: "26px 28px", marginBottom: "2rem"
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: ultimoImpacto.impacto >= 0 ? "#166534" : "#791F1F", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+            Último impacto registrado
+          </div>
+          <div style={{ fontSize: 38, fontWeight: 600, color: ultimoImpacto.impacto >= 0 ? "#166534" : "#791F1F", lineHeight: 1.1, marginBottom: 6, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
+            {formatBRL(ultimoImpacto.impacto)}
+          </div>
+          <div style={{ fontSize: 12, color: "#555", marginBottom: ultimoImpacto.oq ? 14 : 0 }}>
+            {ultimoImpacto.data} às {ultimoImpacto.hora} · {ultimoImpacto.impacto >= 0 ? "ganho / prejuízo evitado" : "prejuízo registrado"}
+          </div>
+          {ultimoImpacto.oq && (
+            <div style={{ fontSize: 13, color: "#222", lineHeight: 1.6, fontStyle: "italic" }}>
+              "{ultimoImpacto.oq}"
+            </div>
+          )}
+          <div style={{ marginTop: 18, paddingTop: 14, borderTop: "0.5px solid rgba(0,0,0,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: "#555" }}>{filtroData ? (rotuloPeriodo ? "Acumulado · " + rotuloPeriodo : "Acumulado do período") : "Acumulado do mês"}</span>
+            <span style={{ fontSize: 16, fontWeight: 600, color: ((filtroData ? somaPeriodo : somaMes) >= 0) ? "#166534" : "#791F1F", fontVariantNumeric: "tabular-nums" }}>
+              {formatBRL(filtroData ? somaPeriodo : somaMes)}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div style={{ background: "#fff", border: "0.5px dashed #d0cfc8", borderRadius: 18, padding: "32px 28px", marginBottom: "2rem", textAlign: "center" }}>
+          <div style={{ fontSize: 14, color: "#555", marginBottom: 6, fontWeight: 500 }}>
+            {filtroData ? "Nenhum impacto financeiro " + (rotuloPeriodo ? "em " + rotuloPeriodo : "no período selecionado") : "Nenhum impacto financeiro registrado ainda"}
+          </div>
+          <div style={{ fontSize: 12, color: "#aaa" }}>Cada ação que você toma vira um número aqui. Identifiquei X → agi com Y → R$ Z.</div>
+        </div>
+      )}
+
+      {!ocultarForm && (
+      <div style={{ marginBottom: "2rem" }}>
+        {!formOpen ? (
+          <button onClick={() => setFormOpen(true)} style={{
+            width: "100%", padding: "14px 16px", borderRadius: 12,
+            border: "0.5px dashed #b0b0b0", background: "#fff",
+            fontSize: 13, color: "#555", cursor: "pointer",
+            fontFamily: "'Inter', sans-serif", fontWeight: 500,
+          }}>+ Novo registro de hoje</button>
+        ) : (
+          <div style={{ background: "rgba(255, 255, 255, 0.7)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(255, 255, 255, 0.5)", boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)", borderRadius: 16, overflow: "hidden" }}>
+            <div style={{ background: "#F7F6F2", padding: "10px 16px", fontSize: 12, fontWeight: 500, color: "#888", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>Novo registro — {new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long" })}</span>
+              <button onClick={() => { limpar(); setFormOpen(false); }} style={{ fontSize: 18, color: "#aaa", background: "none", border: "none", cursor: "pointer", padding: "0 4px", lineHeight: 1 }}>×</button>
+            </div>
+            {tags.map((t) => (
+              <div key={t.tag} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "10px 16px", borderTop: "0.5px solid #f3f3f3" }}>
+                <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: t.bg, color: t.cor, flexShrink: 0, marginTop: 8, whiteSpace: "nowrap" }}>{t.tag}</span>
+                <textarea value={t.val} onChange={e => t.set(e.target.value)} placeholder={t.ph} rows={2} style={taStyle} />
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "10px 16px", borderTop: "0.5px solid #f3f3f3" }}>
+              <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: "#DDF1F1", color: "#0C6170", flexShrink: 0, marginTop: 8, whiteSpace: "nowrap" }}>IMPACTO (R$)</span>
+              <div style={{ flex: 1 }}>
+                <input value={im} onChange={e => setIm(e.target.value)} placeholder="ex: 1500 · 1.500,50 · -800 (prejuízo)" inputMode="decimal" style={inStyle} />
+                {im && impactoNum !== null && (
+                  <div style={{ fontSize: 11, color: impactoNum < 0 ? "#A32D2D" : "#166534", marginTop: 4, fontWeight: 500 }}>= {formatBRL(impactoNum)}</div>
+                )}
+                {im && impactoNum === null && (
+                  <div style={{ fontSize: 11, color: "#A32D2D", marginTop: 4 }}>Valor inválido</div>
+                )}
+              </div>
+            </div>
+            <div style={{ padding: "10px 16px", borderTop: "0.5px solid #f3f3f3", display: "flex", gap: 8 }}>
+              <Btn primary onClick={salvar} disabled={!oq && !pq && !ac && impactoNum === null}>Salvar registro</Btn>
+              <Btn small onClick={limpar}>Limpar</Btn>
+            </div>
+          </div>
+        )}
+      </div>
+      )}
+
+      <GraficoCorrelacao registros={registrosVisiveis} historico={historico} />
+
+      {filtroData && registrosVisiveis.length === 0 && (
+        <div style={{
+          background: "#fff", border: "0.5px dashed #d0cfc8",
+          borderRadius: 14, padding: "24px 20px", textAlign: "center",
+          fontSize: 13, color: "#888",
+        }}>
+          Nenhum registro do diário {rotuloPeriodo ? "em " + rotuloPeriodo : "no período selecionado"}.
+        </div>
+      )}
+
+      {registrosVisiveis.length > 0 && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 18 }}>
+            Feed · {registrosVisiveis.length} {registrosVisiveis.length === 1 ? "registro" : "registros"}{rotuloPeriodo ? " · " + rotuloPeriodo : ""}
+          </div>
+          <div style={{ position: "relative", paddingLeft: 28 }}>
+            <div style={{ position: "absolute", left: 6, top: 10, bottom: 10, width: 2, background: "#ececec" }} />
+            {registrosVisiveis.map((r) => {
+              const temImpacto = typeof r.impacto === "number";
+              const corDot = temImpacto ? (r.impacto >= 0 ? "#639922" : "#A32D2D") : "#bbb";
+              return (
+                <div key={r.id} style={{ position: "relative", marginBottom: 16 }}>
+                  <div style={{ position: "absolute", left: -28, top: 14, width: 14, height: 14, borderRadius: "50%", background: corDot, border: "3px solid #FAFAF8", boxShadow: "0 0 0 1px " + corDot }} />
+                  <div style={{ background: "rgba(255, 255, 255, 0.7)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(255, 255, 255, 0.5)", boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)", borderRadius: 16, overflow: "hidden" }}>
+                    <div style={{ background: "#F7F6F2", padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 11, color: "#888", fontWeight: 500 }}>{r.data} às {r.hora}</span>
+                      <button onClick={() => remover(r.id)} style={{ fontSize: 13, color: "#ccc", background: "none", border: "none", cursor: "pointer", padding: "0 4px" }}>×</button>
+                    </div>
+                    {[["O QUÊ", r.oq, "#FAEEDA", "#854F0B"], ["POR QUÊ", r.pq, "#E6F1FB", "#185FA5"], ["AÇÃO", r.ac, "#EAF3DE", "#3B6D11"]].filter(([, v]) => v).map(([tag, val, bg, cor]) => (
+                      <div key={tag} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "9px 16px", borderTop: "0.5px solid #f3f3f3" }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: bg, color: cor, flexShrink: 0, marginTop: 1, whiteSpace: "nowrap" }}>{tag}</span>
+                        <span style={{ fontSize: 13, color: "#222", lineHeight: 1.5 }}>{val}</span>
+                      </div>
+                    ))}
+                    {r.metaSnapshot && (r.metaSnapshot.gap !== null || r.metaSnapshot.pctMeta !== null) && (
+                      <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "9px 16px", borderTop: "0.5px solid #f3f3f3", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: "#F1EFE8", color: "#555", flexShrink: 0, whiteSpace: "nowrap" }}>CONTEXTO</span>
+                        {r.metaSnapshot.pctMeta !== null && (
+                          <span style={{ fontSize: 12, color: r.metaSnapshot.metaBatida ? "#3B6D11" : "#555", fontWeight: 500 }}>
+                            {Math.round(r.metaSnapshot.pctMeta)}% da meta
+                          </span>
+                        )}
+                        {r.metaSnapshot.gap !== null && r.metaSnapshot.gap > 0 && (
+                          <span style={{ fontSize: 11, color: "#A32D2D" }}>
+                            gap: {formatBRLInt(r.metaSnapshot.gap)}
+                          </span>
+                        )}
+                        {r.metaSnapshot.metaBatida && (
+                          <span style={{ fontSize: 11, color: "#3B6D11", fontWeight: 500 }}>meta batida</span>
+                        )}
+                      </div>
+                    )}
+                    {temImpacto && (
+                      <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "9px 16px", borderTop: "0.5px solid #f3f3f3" }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: "#DDF1F1", color: "#0C6170", flexShrink: 0, whiteSpace: "nowrap" }}>IMPACTO</span>
+                        <span style={{ fontSize: 13, color: r.impacto < 0 ? "#A32D2D" : "#166534", fontWeight: 600 }}>{formatBRL(r.impacto)}</span>
+                        {r.impacto < 0 && <span style={{ fontSize: 11, color: "#aaa" }}>prejuízo</span>}
+                        {r.impacto > 0 && <span style={{ fontSize: 11, color: "#aaa" }}>ganho / evitado</span>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── SEÇÃO: DAILY PULSE ───────────────────────────────────────────────────────
+
+function SecaoPulse() {
+  const [fat, setFat] = useState("");
+  const [meta, setMeta] = useState("");
+  const [obsChecklist] = useStorage("obs_" + todayKey(), {});
+  const focoAuto = CHECKLIST
+    .flatMap(b => b.items)
+    .map(it => (obsChecklist[it.id] || "").trim())
+    .filter(Boolean)
+    .join(" · ");
+  const [foco, setFoco] = useState(focoAuto);
+  const [focoEditado, setFocoEditado] = useState(false);
+  useEffect(() => {
+    if (!focoEditado) setFoco(focoAuto);
+  }, [focoAuto, focoEditado]);
+  const [risco, setRisco] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [pulse, setPulse] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const gerar = async () => {
+    setLoading(true); setPulse("");
+    const contexto = [
+      fat && meta ? `Faturamento atual: R$ ${fat}k de uma meta de R$ ${meta}k.` : "",
+      foco ? `Foco do dia: ${foco}.` : "",
+      risco ? `Risco identificado: ${risco}.` : "",
+    ].filter(Boolean).join(" ") || "Dia normal de monitoramento.";
+
+    try {
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: "Você é assistente de inteligência comercial de e-commerce brasileiro. Escreva um daily pulse para o Microsoft Teams em português, tom direto e profissional, máximo 5 linhas. Use emojis com moderação. Formato: saudação curta + foco do dia + número ou risco + ação prevista. Nunca invente dados.",
+          messages: [{ role: "user", content: `Escreve meu daily pulse para o Teams com base nisso: ${contexto}` }]
+        })
+      });
+      const data = await resp.json();
+      setPulse(data.content?.map(b => b.text || "").join("").trim() || "");
+    } catch { setPulse("Erro ao gerar. Tente novamente."); }
+    setLoading(false);
+  };
+
+  const copiar = () => {
+    navigator.clipboard.writeText(pulse).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2500); });
+  };
+
+  const inStyle = { border: "0.5px solid #e0deda", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#111", fontFamily: "'Inter', sans-serif", outline: "none", background: "#FAFAF8", width: "100%", boxSizing: "border-box" };
+
+  return (
+    <div>
+      <div style={{ background: "rgba(255, 255, 255, 0.7)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(255, 255, 255, 0.5)", boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)", borderRadius: 16, overflow: "hidden", marginBottom: 14 }}>
+        <div style={{ background: "#F7F6F2", padding: "10px 16px", fontSize: 12, fontWeight: 500, color: "#888" }}>Preencha o que souber — o resto a IA completa</div>
+        <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 11, color: "#888", marginBottom: 5, fontWeight: 500 }}>Faturamento atual (R$k)</div>
+              <input value={fat} onChange={e => setFat(e.target.value)} placeholder="ex: 650" style={inStyle} />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "#888", marginBottom: 5, fontWeight: 500 }}>Meta do dia (R$k)</div>
+              <input value={meta} onChange={e => setMeta(e.target.value)} placeholder="ex: 1400" style={inStyle} />
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: "#888", marginBottom: 5, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+              <span>Foco do dia</span>
+              {focoAuto && !focoEditado && (
+                <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: "#FFFBEB", color: "#8A6A10", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                  auto · do checklist
+                </span>
+              )}
+              {focoEditado && focoAuto && (
+                <button
+                  onClick={() => { setFocoEditado(false); setFoco(focoAuto); }}
+                  style={{
+                    fontSize: 10, fontWeight: 500,
+                    padding: "2px 8px", borderRadius: 4,
+                    border: "0.5px solid #d0cfc8", background: "transparent",
+                    color: "#555", cursor: "pointer",
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                  title="Restaurar texto automático das observações do checklist"
+                >
+                  restaurar
+                </button>
+              )}
+            </div>
+            <input
+              value={foco}
+              onChange={e => { setFocoEditado(true); setFoco(e.target.value); }}
+              placeholder={focoAuto ? "Edite o texto puxado do checklist…" : "ex: monitorar ar condicionado após queda de ontem"}
+              style={inStyle}
+            />
+            {focoAuto && !focoEditado && (
+              <div style={{ fontSize: 10, color: "#aaa", marginTop: 4 }}>
+                Pré-preenchido com {CHECKLIST.flatMap(b => b.items).filter(it => (obsChecklist[it.id] || "").trim()).length} observação{CHECKLIST.flatMap(b => b.items).filter(it => (obsChecklist[it.id] || "").trim()).length === 1 ? "" : "ões"} do checklist de hoje.
+              </div>
+            )}
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: "#888", marginBottom: 5, fontWeight: 500 }}>Risco ou alerta identificado</div>
+            <input value={risco} onChange={e => setRisco(e.target.value)} placeholder="ex: concorrência com preço abaixo em LG 12k" style={inStyle} />
+          </div>
+        </div>
+        <div style={{ padding: "10px 16px", borderTop: "0.5px solid #f3f3f3" }}>
+          <Btn primary onClick={gerar} disabled={loading}>{loading ? "Gerando..." : "Gerar daily pulse com IA ⚡"}</Btn>
+        </div>
+      </div>
+
+      {pulse && (
+        <div style={{ background: "rgba(255, 255, 255, 0.7)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(255, 255, 255, 0.5)", boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)", borderRadius: 16, overflow: "hidden" }}>
+          <div style={{ background: "#EAF3DE", padding: "10px 16px", fontSize: 12, fontWeight: 600, color: "#27500A" }}>Daily pulse gerado — pronto para colar no Teams</div>
+          <div style={{ padding: "14px 16px", fontSize: 13, color: "#111", lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{pulse}</div>
+          <div style={{ padding: "10px 16px", borderTop: "0.5px solid #f3f3f3" }}>
+            <Btn primary onClick={copiar}>{copied ? "✓ Copiado!" : "Copiar para Teams"}</Btn>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ── SEÇÃO: SEMANA ────────────────────────────────────────────────────────────
+
+const REUNIOES = [
+  {
+    dia: "Segunda", icone: "S", cor: "#185FA5", bg: "#E6F1FB", badge: "#B5D4F4",
+    nome: "Sprint Planning — Squad vendas",
+    horario: "11h · com Bruna",
+    descricao: "Cada analista fala sobre sua carteira. Você precisa chegar com a semana anterior resumida e o foco da semana que começa.",
+    preparo: [
+      "Rodar a query top da semana — ver quais SKUs mais venderam nos últimos 7 dias",
+      "Saber o faturamento da semana vs meta: estamos acima ou abaixo?",
+      "Ter pelo menos 1 caso da semana: identifiquei X, agi com Y, resultado foi Z",
+      "Definir o foco da carteira para a semana que começa",
+    ],
+    roteiro: [
+      { label: "Faturamento geral", pergunta: "Quanto faturamos até agora? Estamos acima ou abaixo da meta? Qual o % de atingimento?", exemplo: "ex: R$ 15,3M de R$ 23,5M de meta — 65% atingido, crescendo 37% vs AA" },
+      { label: "Quem puxou?", pergunta: "Qual comprador ou categoria teve o melhor desempenho? Por quê?", exemplo: "ex: Saboya puxou com TV e split — campanha de ar no fim do verão converteu bem" },
+      { label: "Quem travou?", pergunta: "Qual comprador ou categoria ficou abaixo do esperado? Qual foi a causa?", exemplo: "ex: Vinicius com ventiladores — ruptura em Salvador, estoque preso em transferência" },
+      { label: "Regiões", pergunta: "Alguma região se destacou ou travou? O que explica isso?", exemplo: "ex: PE puxando com 17% do total, BA travada por limitação de 220v em linha branca" },
+      { label: "Categoria destaque", pergunta: "Quais categorias cresceram acima do esperado?", exemplo: "ex: TVs, Lavadoras, Fogões, Adegas, Fritadeiras e Cápsulas" },
+      { label: "Categoria ofensora", pergunta: "Quais categorias estão abaixo? Qual a causa raiz?", exemplo: "ex: Freezers, Ar condicionado, Ventiladores e Cafeteiras" },
+      { label: "Próxima ação", pergunta: "Qual é a ação prioritária desta semana? Com quem você vai agir?", exemplo: "ex: CRM + campanha Mães — alinhar SKUs e preços com compradores até quarta" },
+    ]
+  },
+  {
+    dia: "Quarta", icone: "Q", cor: "#854F0B", bg: "#FAEEDA", badge: "#FAC775",
+    nome: "Weekly Sync — e-Commerce",
+    horario: "10h · com Volpa e todo o time",
+    descricao: "Contexto da semana, como está até agora e quais são as próximas ações. Tom estratégico — Volpa quer leitura de negócio, não só tarefas.",
+    preparo: [
+      "% atingimento de meta até ontem — número exato, não aproximação",
+      "Qual categoria está puxando e qual está travando",
+      "Uma ação proativa que você tomou ou vai tomar esta semana",
+      "Se houver alerta de ruptura ou competitividade, trazer o diagnóstico pronto",
+    ]
+  },
+  {
+    dia: "Quarta", icone: "Q", cor: "#3B6D11", bg: "#EAF3DE", badge: "#C0DD97",
+    nome: "Reunião Ecomm + MKT + Comercial",
+    horario: "9h · antes do Weekly",
+    descricao: "Alinhamento entre squads antes do Weekly. Use para antecipar o que vai apresentar para o Volpa às 10h.",
+    preparo: [
+      "Checar se há algum JIRA de campanha pendente para alimentar com preço",
+      "Ver se as ofertas da semana estão com preço definido e comunicado para o CRM",
+      "Antecipar se alguma categoria precisa de reforço de mídia",
+    ]
+  },
+  {
+    dia: "Quinta", icone: "Q", cor: "#534AB7", bg: "#EEEDFE", badge: "#CECBF6",
+    nome: "Mídia + Vendas — alinhamento quinzenal",
+    horario: "14h · com coordenadora de mídia",
+    descricao: "A coordenadora de mídia criou um dashboard de ROAS e investimento por categoria. Reunião recente — foco em entender o que está sendo investido e se está gerando retorno.",
+    preparo: [
+      "Olhar o faturamento de eletro por categoria antes da reunião: TV, ar, linha branca",
+      "Pensar: tem alguma categoria com muita verba mas pouco retorno? Ou o contrário?",
+      "Ter em mente quais SKUs são os top de cada carteira — pode ajudar a cruzar com o ROAS",
+      "Perguntar: como posso te ajudar com dados comerciais para melhorar o ROAS por categoria?",
+    ]
+  },
+];
+
+function SecaoSemana() {
+  const diasSemana = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
+  const hoje = diasSemana[new Date().getDay()];
+  const [aberto, setAberto] = useState(null);
+
+  return (
+    <div>
+      <div style={{ background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 10, padding: "10px 14px", marginBottom: 14 }}>
+        <span style={{ fontSize: 12, color: "#185FA5" }}>
+          Hoje é <strong>{hoje}</strong>. As reuniões do seu dia estão destacadas abaixo.
+        </span>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {REUNIOES.map((r, i) => {
+          const ehHoje = r.dia === hoje;
+          const isOpen = aberto === i;
+          return (
+            <div key={i} style={{ background: "rgba(255, 255, 255, 0.7)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid " + (ehHoje ? r.cor : "rgba(255, 255, 255, 0.5)"), boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)", borderRadius: 16, overflow: "hidden", outline: ehHoje ? "2px solid " + r.badge : "none" }}>
+              <div onClick={() => setAberto(isOpen ? null : i)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", cursor: "pointer" }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: r.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: r.cor }}>{r.dia.slice(0,3).toUpperCase()}</span>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "#111" }}>{r.nome}</span>
+                    {ehHoje && <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 4, background: r.bg, color: r.cor }}>hoje</span>}
+                  </div>
+                  <span style={{ fontSize: 12, color: "#aaa" }}>{r.horario}</span>
+                </div>
+                <span style={{ fontSize: 12, color: "#bbb" }}>{isOpen ? "▲" : "▼"}</span>
+              </div>
+              {isOpen && (
+                <div style={{ borderTop: "0.5px solid #f3f3f3" }}>
+                  <div style={{ padding: "12px 16px", background: r.bg }}>
+                    <div style={{ fontSize: 12, color: r.cor, lineHeight: 1.6, marginBottom: 12 }}>{r.descricao}</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: r.cor, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>O que preparar antes</div>
+                    {r.preparo.map((p, j) => (
+                      <div key={j} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: r.cor, marginTop: 5, flexShrink: 0 }} />
+                        <span style={{ fontSize: 13, color: r.cor, lineHeight: 1.5 }}>{p}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {r.roteiro && (
+                    <div style={{ padding: "14px 16px", borderTop: "0.5px solid #f3f3f3" }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: "#555", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 12 }}>Roteiro para preencher o Loop</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {r.roteiro.map((step, j) => (
+                          <div key={j} style={{ background: "#FAFAF8", border: "0.5px solid #E2E8F0", borderRadius: 10, padding: "12px 14px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                              <div style={{ width: 22, height: 22, borderRadius: "50%", background: r.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: r.cor }}>{j + 1}</span>
+                              </div>
+                              <span style={{ fontSize: 13, fontWeight: 500, color: "#111" }}>{step.label}</span>
+                            </div>
+                            <div style={{ fontSize: 13, color: "#444", lineHeight: 1.6, marginBottom: 6, paddingLeft: 30 }}>{step.pergunta}</div>
+                            <div style={{ fontSize: 11, color: "#aaa", paddingLeft: 30, fontStyle: "italic" }}>{step.exemplo}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── SEÇÃO: TOP SKUs CURVA A ──────────────────────────────────────────────────
+
+const TOP_SKUS = {
+  eletro: [
+    { codigo: "2456789", nome: "TV LG 55'' 4K UHD",         nomeCurto: "TV LG 55 4K",        precoAlvo: 2499.00 },
+    { codigo: "2198432", nome: "Split Consul 12k BTUs",     nomeCurto: "Split Consul 12k",   precoAlvo: 1899.00 },
+    { codigo: "2367891", nome: "Lavadora Brastemp 12kg",    nomeCurto: "Lav. Brastemp 12kg", precoAlvo: 2199.00 },
+    { codigo: "2445678", nome: "Fogão Atlas 5 bocas",       nomeCurto: "Fogão Atlas 5b",     precoAlvo:  949.00 },
+    { codigo: "2589012", nome: "Geladeira Electrolux 382L", nomeCurto: "Geladeira Elux 382", precoAlvo: 2799.00 },
+  ],
+  metais: [
+    { codigo: "3102345", nome: "Chuveiro Lorenzetti Acqua", nomeCurto: "Chuveiro Acqua",     precoAlvo:  219.90 },
+    { codigo: "3208976", nome: "Fechadura Pado Interna",    nomeCurto: "Fechadura Pado",     precoAlvo:  129.90 },
+    { codigo: "3315487", nome: "Filtro Europa Premium",     nomeCurto: "Filtro Europa",      precoAlvo:  349.00 },
+    { codigo: "3421659", nome: "Torneira Deca Link",        nomeCurto: "Torneira Deca Link", precoAlvo:  189.90 },
+    { codigo: "3528741", nome: "Misturador Docol Cozinha",  nomeCurto: "Mist. Docol Coz.",   precoAlvo:  279.00 },
+  ],
+};
+
+function SecaoTopSKUs() {
+  const [analise, setAnalise] = useState("");
+  const [modoEstudo, setModoEstudo] = useStorage("curva_a_modo_estudo", false);
+  const [revelados, setRevelados] = useState({});
+  const [acertos, setAcertos] = useStorage("curva_a_acertos_" + todayKey(), {});
+
+  const toggleRevelar = (codigo) => setRevelados(r => ({ ...r, [codigo]: !r[codigo] }));
+  const marcarAcerto = (codigo, acertou) => setAcertos({ ...acertos, [codigo]: acertou ? "ok" : "err" });
+  const resetEstudo = () => { setRevelados({}); setAcertos({}); };
+
+  const colunas = [
+    {
+      titulo: "Eletro (Top 5)",
+      items: TOP_SKUS.eletro,
+      cor: "#185FA5",
+      bg: "#E6F1FB",
+      border: "#B5D4F4",
+      badge: "#185FA5",
+      badgeBg: "#B5D4F4",
+      subtitulo: "Compradores 18877 · 19364 · 29057",
+      glow: "rgba(24, 95, 165, 0.35)",
+    },
+    {
+      titulo: "Metais & Acessórios (Top 5)",
+      items: TOP_SKUS.metais,
+      cor: "#444441",
+      bg: "#F1EFE8",
+      border: "#D3D1C7",
+      badge: "#444441",
+      badgeBg: "#D3D1C7",
+      subtitulo: "Carteira Amanda · metais & acessórios",
+      glow: "rgba(68, 68, 65, 0.3)",
+    },
+  ];
+
+  const analiseAtiva = analise.trim().length > 0;
+  const skuPresente = (codigo) => analiseAtiva && analise.includes(String(codigo));
+
+  const todosSkus = [...TOP_SKUS.eletro, ...TOP_SKUS.metais];
+  const presentes = analiseAtiva ? todosSkus.filter(s => skuPresente(s.codigo)).length : 0;
+  const ausentes = analiseAtiva ? todosSkus.length - presentes : 0;
+
+  return (
+    <div>
+      <style>{`
+        @keyframes skuGlow {
+          0%, 100% { box-shadow: 0 0 0 0 var(--glow-color), 0 2px 8px rgba(0,0,0,0.04); }
+          50%      { box-shadow: 0 0 0 4px var(--glow-color), 0 4px 14px rgba(0,0,0,0.08); }
+        }
+        .sku-card-glow { animation: skuGlow 2.2s ease-in-out infinite; }
+      `}</style>
+
+      <div style={{ background: "#F7F6F2", border: "0.5px solid #e0deda", borderRadius: 10, padding: "10px 14px", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 12, color: "#555" }}>
+          SKUs prioritários da Curva A — bater preço alvo toda manhã antes do daily pulse.
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {modoEstudo && (
+            <span style={{ fontSize: 11, fontWeight: 500, color: "#555" }}>
+              <span style={{ color: "#3B6D11", fontWeight: 600 }}>{Object.values(acertos).filter(v => v === "ok").length}</span>/{todosSkus.length} de cabeça
+            </span>
+          )}
+          {modoEstudo && (
+            <button
+              onClick={resetEstudo}
+              style={{
+                fontFamily: "'Inter', sans-serif", fontSize: 11, fontWeight: 500,
+                padding: "4px 10px", borderRadius: 8,
+                border: "0.5px solid #d0cfc8", background: "transparent",
+                color: "#555", cursor: "pointer",
+              }}
+            >
+              Resetar
+            </button>
+          )}
+          <button
+            onClick={() => setModoEstudo(!modoEstudo)}
+            style={{
+              fontFamily: "'Inter', sans-serif", fontSize: 12, fontWeight: 500,
+              padding: "5px 12px", borderRadius: 9,
+              border: "0.5px solid " + (modoEstudo ? "#6b21a8" : "#d0cfc8"),
+              background: modoEstudo ? "#6b21a8" : "transparent",
+              color: modoEstudo ? "#fff" : "#333",
+              cursor: "pointer",
+              display: "inline-flex", alignItems: "center", gap: 6,
+              transition: TRANSITION,
+            }}
+            title="Esconde os nomes dos SKUs para treinar memorização"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {modoEstudo ? (
+                <>
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </>
+              ) : (
+                <>
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
+                  <circle cx="12" cy="12" r="3" />
+                </>
+              )}
+            </svg>
+            {modoEstudo ? "Sair do Modo Estudo" : "Modo Estudo"}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ background: "rgba(255, 255, 255, 0.7)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(255, 255, 255, 0.5)", boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)", borderRadius: 16, overflow: "hidden", marginBottom: 18 }}>
+        <div style={{ background: "#F7F6F2", padding: "10px 16px", fontSize: 12, fontWeight: 600, color: "#555", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span>Analisar Venda do Dia</span>
+          {analiseAtiva && (
+            <span style={{ fontSize: 11, fontWeight: 500, color: "#888" }}>
+              <span style={{ color: "#3B6D11", fontWeight: 600 }}>{presentes}</span> performando ·{" "}
+              <span style={{ color: ausentes > 0 ? "#A32D2D" : "#888", fontWeight: 600 }}>{ausentes}</span> {ausentes === 1 ? "ausente" : "ausentes"}
+            </span>
+          )}
+        </div>
+        <textarea
+          value={analise}
+          onChange={e => setAnalise(e.target.value)}
+          placeholder="Cole aqui o resultado da query SQL (ex: top 10 do dia). A ferramenta destaca quais SKUs da Curva A apareceram e quais ficaram de fora."
+          rows={5}
+          style={{
+            width: "100%", boxSizing: "border-box", border: "none", outline: "none",
+            resize: "vertical", padding: "12px 16px",
+            fontSize: 12, fontFamily: "monospace", lineHeight: 1.6, color: "#333",
+            background: "#FAFAF8",
+          }}
+        />
+        {analiseAtiva && (
+          <div style={{ padding: "8px 16px", borderTop: "0.5px solid #f3f3f3", display: "flex", justifyContent: "flex-end" }}>
+            <Btn small onClick={() => setAnalise("")}>Limpar análise</Btn>
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+        {colunas.map((col) => (
+          <div key={col.titulo}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 4, background: col.badgeBg, color: col.badge, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                {col.titulo}
+              </span>
+            </div>
+            <div style={{ fontSize: 11, color: "#aaa", marginBottom: 10 }}>{col.subtitulo}</div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {col.items.map((sku, i) => {
+                const presente = skuPresente(sku.codigo);
+                const ausente = analiseAtiva && !presente;
+                const opacity = ausente ? 0.45 : 1;
+                const revelado = !!revelados[sku.codigo];
+                const acertoStatus = acertos[sku.codigo];
+                const escondido = modoEstudo && !revelado;
+                return (
+                  <div key={sku.codigo}>
+                    <div
+                      className={presente ? "sku-card-glow" : ""}
+                      style={{
+                        background: col.bg,
+                        border: "0.5px solid " + (acertoStatus === "ok" ? "#97C459" : acertoStatus === "err" ? "#F09595" : col.border),
+                        borderRadius: 12,
+                        padding: "12px 14px",
+                        display: "flex", alignItems: "center", gap: 12,
+                        opacity,
+                        filter: ausente ? "grayscale(0.6)" : "none",
+                        transition: "opacity 0.3s " + EASE + ", filter 0.3s " + EASE + ", border-color 0.3s " + EASE,
+                        ["--glow-color"]: col.glow,
+                      }}
+                    >
+                      <div style={{
+                        width: 26, height: 26, borderRadius: "50%",
+                        background: "#fff", border: "0.5px solid " + col.border,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        flexShrink: 0,
+                      }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: col.cor }}>{i + 1}</span>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: col.cor, letterSpacing: "0.04em", marginBottom: 2, fontVariantNumeric: "tabular-nums" }}>
+                          #{sku.codigo}
+                        </div>
+                        {escondido ? (
+                          <div style={{
+                            fontSize: 13, fontWeight: 500,
+                            color: "transparent",
+                            background: "linear-gradient(90deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.18) 50%, rgba(0,0,0,0.12) 100%)",
+                            borderRadius: 4,
+                            lineHeight: 1.3, letterSpacing: "0.1em",
+                            userSelect: "none",
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          }}>
+                            {"█".repeat(Math.max(8, Math.min(16, (sku.nomeCurto || sku.nome).length)))}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 13, fontWeight: 500, color: "#111", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={sku.nome}>
+                            {sku.nomeCurto || sku.nome}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontSize: 9, fontWeight: 600, color: col.cor, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 1 }}>
+                          alvo
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: "#A16207", fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+                          {formatBRL(sku.precoAlvo)}
+                        </div>
+                      </div>
+                    </div>
+                    {modoEstudo && (
+                      <div style={{ marginTop: 4, display: "flex", gap: 6, alignItems: "center" }}>
+                        <button
+                          onClick={() => toggleRevelar(sku.codigo)}
+                          style={{
+                            flex: 1,
+                            fontSize: 11, fontWeight: 500,
+                            padding: "5px 10px", borderRadius: 8,
+                            border: "0.5px dashed " + col.border,
+                            background: "transparent",
+                            color: "#555", cursor: "pointer",
+                            fontFamily: "'Inter', sans-serif",
+                          }}
+                        >
+                          {revelado ? "Esconder" : "Revelar nome"}
+                        </button>
+                        {revelado && (
+                          <>
+                            <button
+                              onClick={() => marcarAcerto(sku.codigo, true)}
+                              title="Acertei de cabeça"
+                              style={{
+                                fontSize: 12,
+                                padding: "5px 10px", borderRadius: 8,
+                                border: "0.5px solid " + (acertoStatus === "ok" ? "#97C459" : "#d0cfc8"),
+                                background: acertoStatus === "ok" ? "#EAF3DE" : "transparent",
+                                color: acertoStatus === "ok" ? "#27500A" : "#555",
+                                cursor: "pointer",
+                                fontFamily: "'Inter', sans-serif",
+                              }}
+                            >
+                              ✓
+                            </button>
+                            <button
+                              onClick={() => marcarAcerto(sku.codigo, false)}
+                              title="Errei"
+                              style={{
+                                fontSize: 12,
+                                padding: "5px 10px", borderRadius: 8,
+                                border: "0.5px solid " + (acertoStatus === "err" ? "#F09595" : "#d0cfc8"),
+                                background: acertoStatus === "err" ? "#FCEBEB" : "transparent",
+                                color: acertoStatus === "err" ? "#791F1F" : "#555",
+                                cursor: "pointer",
+                                fontFamily: "'Inter', sans-serif",
+                              }}
+                            >
+                              ✗
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                    {ausente && (
+                      <div style={{
+                        marginTop: 4, padding: "6px 12px",
+                        background: "#FCEBEB", border: "0.5px solid #F09595",
+                        borderRadius: 8,
+                        fontSize: 11, color: "#791F1F", fontWeight: 500,
+                        display: "flex", alignItems: "center", gap: 6,
+                      }}>
+                        <span style={{ fontSize: 13 }}>⚠️</span>
+                        <span>Atenção: Este SKU não performou hoje!</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── COMPONENTES DO NOVO LAYOUT ───────────────────────────────────────────────
+
+function SecaoHeader({ title, subtitle }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ fontSize: 19, fontWeight: 600, color: "#111", margin: 0, letterSpacing: "-0.02em" }}>{title}</div>
+      {subtitle && <div style={{ fontSize: 12, fontWeight: 400, color: "#888", marginTop: 4 }}>{subtitle}</div>}
+    </div>
+  );
+}
+
+function Cockpit({ status, setStatus, setHistorico, compact }) {
+  const [editing, setEditing] = useState(false);
+  const [draftVenda, setDraftVenda] = useState("");
+  const [draftMeta, setDraftMeta] = useState("");
+
+  const venda = parseBRL(status.venda);
+  const meta = parseBRL(status.meta);
+  const pctMeta = (venda !== null && meta !== null && meta > 0) ? Math.round((venda / meta) * 100) : null;
+  const metaBatida = venda !== null && meta !== null && venda >= meta;
+  const falta = (venda !== null && meta !== null) ? Math.max(0, meta - venda) : null;
+  const superou = metaBatida ? venda - meta : 0;
+
+  const draftVendaNum = parseBRL(draftVenda);
+  const draftMetaNum = parseBRL(draftMeta);
+
+  const abrirEdicao = () => {
+    setDraftVenda(status.venda || "");
+    setDraftMeta(status.meta || "");
+    setEditing(true);
+  };
+  const salvar = () => {
+    setStatus({ venda: draftVenda, meta: draftMeta });
+    const novoHist = salvarHistoricoVendas(parseBRL(draftVenda), parseBRL(draftMeta));
+    if (novoHist && typeof setHistorico === "function") setHistorico(novoHist);
+    setEditing(false);
+  };
+  const cancelar = () => setEditing(false);
+
+  const cardBase = {
+    background: "rgba(255, 255, 255, 0.7)",
+    backdropFilter: "blur(10px)",
+    WebkitBackdropFilter: "blur(10px)",
+    border: "1px solid rgba(255, 255, 255, 0.5)",
+    boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.03)",
+    borderRadius: 16,
+    padding: "22px 24px",
+    boxSizing: "border-box",
+  };
+  const labelBase = {
+    fontSize: 11, fontWeight: 600, color: "#888",
+    textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14,
+  };
+  const numBase = {
+    fontWeight: 600, lineHeight: 1.05, letterSpacing: "-0.02em",
+    fontVariantNumeric: "tabular-nums",
+  };
+  const inputStyle = {
+    border: "0.5px solid #e0deda", borderRadius: 8, padding: "9px 12px",
+    fontSize: 14, color: "#111", fontFamily: "'Inter', sans-serif",
+    outline: "none", background: "#FAFAF8", width: "100%", boxSizing: "border-box",
+  };
+
+  const corFalta = falta === null ? "#bbb" : metaBatida ? "#166534" : "#A32D2D";
+  const labelFalta = falta === null
+    ? "preencha venda e meta"
+    : metaBatida
+      ? "meta batida · superou em " + formatBRLInt(superou)
+      : "para bater a meta do dia";
+
+  const precisaPreencher = venda === null && meta === null;
+
+  if (compact) {
+    // Cálculo do ritmo esperado por hora (pro-rata do dia operacional)
+    const agora = new Date();
+    const h = agora.getHours() + agora.getMinutes() / 60;
+    const HORA_INICIO = 8;
+    const HORA_FIM = 22;
+    const progEsp = Math.min(1, Math.max(0, (h - HORA_INICIO) / (HORA_FIM - HORA_INICIO)));
+    const vendaEsperada = (meta !== null && meta > 0) ? meta * progEsp : null;
+
+    // Define o Status da Operação
+    let stTipo = "neutro";
+    let stTitulo = "Aguardando dados";
+    let stSub = "Preencha venda e meta para acompanhar o ritmo.";
+    if (venda !== null && meta !== null && meta > 0) {
+      if (metaBatida) {
+        stTipo = "saudavel";
+        stTitulo = "Meta batida";
+        stSub = "Superou em " + formatBRLInt(superou) + " · segue operando.";
+      } else if (vendaEsperada === null || venda >= vendaEsperada * 0.95) {
+        stTipo = "saudavel";
+        stTitulo = "Operação Saudável";
+        stSub = "Ritmo alinhado com a meta para este horário.";
+      } else {
+        stTipo = "alerta";
+        stTitulo = "Ritmo de Venda abaixo da Meta";
+        const deficit = Math.max(0, vendaEsperada - venda);
+        stSub = "Atraso de " + formatBRLInt(deficit) + " em relação ao ritmo esperado.";
+      }
+    }
+
+    const PAL = {
+      saudavel: {
+        fundo:  "linear-gradient(135deg, #F0FDF4 0%, #FFFFFF 60%)",
+        borda:  "#BBF7D0",
+        titulo: "#14532D",
+        accent: "#16A34A",
+        iconBg: "#DCFCE7",
+        pctBg:  "#DCFCE7",
+      },
+      alerta: {
+        fundo:  "linear-gradient(135deg, #FFFBEB 0%, #FFFFFF 60%)",
+        borda:  "#FCD34D",
+        titulo: "#7C2D12",
+        accent: "#B45309",
+        iconBg: "#FEF3C7",
+        pctBg:  "#FEF3C7",
+      },
+      neutro: {
+        fundo:  "linear-gradient(135deg, #F8FAFC 0%, #FFFFFF 60%)",
+        borda:  "#E5E7EB",
+        titulo: "#334155",
+        accent: "#64748B",
+        iconBg: "#F1F5F9",
+        pctBg:  "#F1F5F9",
+      },
+    };
+    const pal = PAL[stTipo];
+
+    const IconSaudavel = (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={pal.accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+    );
+    const IconAlerta = (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={pal.accent} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+    );
+    const IconNeutro = (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={pal.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </svg>
+    );
+    const statusIcon = stTipo === "saudavel" ? IconSaudavel : stTipo === "alerta" ? IconAlerta : IconNeutro;
+
+    return (
+      <div style={{
+        position: "sticky", top: 0, zIndex: 15,
+        background: "rgba(248, 250, 252, 0.92)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+        borderBottom: "0.5px solid #e5e7eb",
+        margin: "0 0 22px",
+        paddingTop: 14, paddingBottom: 14,
+      }}>
+        {/* Painel Premium · Status da Operação */}
+        <div style={{
+          background: pal.fundo,
+          border: "1px solid " + pal.borda,
+          borderRadius: 18,
+          padding: "16px 20px",
+          boxShadow: "0 2px 8px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.03)",
+          display: "flex", alignItems: "center", gap: 16,
+          flexWrap: "wrap",
+        }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: "50%",
+            background: pal.iconBg,
+            border: "1px solid " + pal.borda,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+          }}>
+            {statusIcon}
+          </div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{
+              fontSize: 10, fontWeight: 700, color: pal.accent,
+              letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 3,
+            }}>Status da Operação</div>
+            <div style={{
+              fontSize: 22, fontWeight: 600, color: pal.titulo,
+              letterSpacing: "-0.02em", lineHeight: 1.2,
+            }}>{stTitulo}</div>
+            <div style={{ fontSize: 12, color: pal.accent, marginTop: 4, fontWeight: 500 }}>
+              {stSub}
+            </div>
+          </div>
+          {pctMeta !== null && (
+            <div style={{
+              textAlign: "right", minWidth: 90,
+              paddingLeft: 18, borderLeft: "1px solid " + pal.borda,
+            }}>
+              <div style={{
+                fontSize: 32, fontWeight: 600, color: pal.titulo,
+                letterSpacing: "-0.03em", lineHeight: 1, fontVariantNumeric: "tabular-nums",
+              }}>{pctMeta}%</div>
+              <div style={{
+                fontSize: 10, color: pal.accent, marginTop: 4,
+                letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 600,
+              }}>da meta</div>
+            </div>
+          )}
+        </div>
+
+        {/* Linha de métricas · compacta */}
+        <div style={{ display: "flex", alignItems: "center", gap: 20, marginTop: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6, fontVariantNumeric: "tabular-nums" }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", letterSpacing: "0.08em", textTransform: "uppercase" }}>Venda</span>
+            <span style={{ fontSize: 15, fontWeight: 600, color: venda === null ? "#bbb" : "#111", letterSpacing: "-0.01em" }}>
+              {venda === null ? "—" : formatBRLInt(venda)}
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6, fontVariantNumeric: "tabular-nums" }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", letterSpacing: "0.08em", textTransform: "uppercase" }}>Meta</span>
+            <span style={{ fontSize: 15, fontWeight: 600, color: meta === null ? "#bbb" : "#111", letterSpacing: "-0.01em" }}>
+              {meta === null ? "—" : formatBRLInt(meta)}
+            </span>
+          </div>
+          {falta !== null && !metaBatida && (
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, fontVariantNumeric: "tabular-nums" }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", letterSpacing: "0.08em", textTransform: "uppercase" }}>Falta</span>
+              <span style={{ fontSize: 15, fontWeight: 600, color: "#A32D2D", letterSpacing: "-0.01em" }}>
+                {formatBRLInt(falta)}
+              </span>
+            </div>
+          )}
+          {vendaEsperada !== null && venda !== null && !metaBatida && (
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, fontVariantNumeric: "tabular-nums" }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", letterSpacing: "0.08em", textTransform: "uppercase" }}>Ritmo</span>
+              <span style={{ fontSize: 15, fontWeight: 600, color: venda >= vendaEsperada * 0.95 ? "#16A34A" : "#B45309", letterSpacing: "-0.01em" }}>
+                {formatBRLInt(vendaEsperada)}
+              </span>
+            </div>
+          )}
+          <div style={{ marginLeft: "auto" }}>
+            {!editing && <Btn small onClick={abrirEdicao}>{precisaPreencher ? "Preencher" : "Editar"}</Btn>}
+          </div>
+        </div>
+
+        {editing && (
+          <div style={{ paddingTop: 14, paddingBottom: 6 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 10, color: "#888", marginBottom: 5, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}>Venda (R$)</div>
+                <input value={draftVenda} onChange={e => setDraftVenda(e.target.value)} placeholder="ex: 650000" inputMode="decimal" style={inputStyle} autoFocus />
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: "#888", marginBottom: 5, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}>Meta (R$)</div>
+                <input value={draftMeta} onChange={e => setDraftMeta(e.target.value)} placeholder="ex: 1400000" inputMode="decimal" style={inputStyle} />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn primary small onClick={salvar}>Salvar</Btn>
+              <Btn small onClick={cancelar}>Cancelar</Btn>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginBottom: "2.5rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 12, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+          Cockpit de Performance
+        </div>
+        {!editing && (
+          <Btn small onClick={abrirEdicao}>{precisaPreencher ? "Preencher" : "Editar"}</Btn>
+        )}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+        <div style={cardBase}>
+          <div style={labelBase}>Venda atual</div>
+          <div style={{ ...numBase, fontSize: 34, color: venda === null ? "#bbb" : "#A16207", marginBottom: pctMeta !== null ? 4 : 0 }}>
+            {venda === null ? "—" : formatBRLInt(venda)}
+          </div>
+          {pctMeta !== null && (
+            <div style={{ fontSize: 12, color: "#888", fontWeight: 500 }}>{pctMeta}% da meta</div>
+          )}
+        </div>
+
+        <div style={cardBase}>
+          <div style={labelBase}>Meta</div>
+          <div style={{ ...numBase, fontSize: 34, color: meta === null ? "#bbb" : "#A16207" }}>
+            {meta === null ? "—" : formatBRLInt(meta)}
+          </div>
+        </div>
+
+        <div style={cardBase}>
+          <div style={labelBase}>Falta para a meta</div>
+          <div style={{ ...numBase, fontSize: 34, color: corFalta, marginBottom: 4 }}>
+            {falta === null ? "—" : formatBRLInt(metaBatida ? 0 : falta)}
+          </div>
+          <div style={{ fontSize: 12, color: corFalta, fontWeight: 500 }}>{labelFalta}</div>
+        </div>
+      </div>
+
+      {editing && (
+        <div style={{ marginTop: 14, background: "rgba(255, 255, 255, 0.7)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(255, 255, 255, 0.5)", boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)", borderRadius: 16, padding: "20px 24px" }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#111", marginBottom: 14 }}>
+            Atualizar números do dia
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 16 }}>
+            <div>
+              <div style={{ fontSize: 11, color: "#888", marginBottom: 6, fontWeight: 500 }}>Venda atual (R$)</div>
+              <input
+                value={draftVenda}
+                onChange={e => setDraftVenda(e.target.value)}
+                placeholder="ex: 650000"
+                inputMode="decimal"
+                style={inputStyle}
+                autoFocus
+              />
+              {draftVenda && draftVendaNum !== null && (
+                <div style={{ fontSize: 11, color: "#A16207", marginTop: 4, fontWeight: 500 }}>= {formatBRLInt(draftVendaNum)}</div>
+              )}
+              {draftVenda && draftVendaNum === null && (
+                <div style={{ fontSize: 11, color: "#A32D2D", marginTop: 4 }}>valor inválido</div>
+              )}
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "#888", marginBottom: 6, fontWeight: 500 }}>Meta (R$)</div>
+              <input
+                value={draftMeta}
+                onChange={e => setDraftMeta(e.target.value)}
+                placeholder="ex: 1400000"
+                inputMode="decimal"
+                style={inputStyle}
+              />
+              {draftMeta && draftMetaNum !== null && (
+                <div style={{ fontSize: 11, color: "#A16207", marginTop: 4, fontWeight: 500 }}>= {formatBRLInt(draftMetaNum)}</div>
+              )}
+              {draftMeta && draftMetaNum === null && (
+                <div style={{ fontSize: 11, color: "#A32D2D", marginTop: 4 }}>valor inválido</div>
+              )}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <Btn primary onClick={salvar}>Salvar</Btn>
+            <Btn small onClick={cancelar}>Cancelar</Btn>
+            <span style={{ fontSize: 11, color: "#aaa", marginLeft: "auto" }}>
+              Valores salvos no navegador · sobrevivem ao F5
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── INSIGHTS · compara hoje vs ontem (pro-rata por hora) ─────────────────────
+
+function InsightsLuma({ venda, historico }) {
+  const hojeKey = todayKey();
+  const ontem = Array.isArray(historico)
+    ? [...historico]
+        .filter(r => r && r.data && r.data < hojeKey && typeof r.valor === "number" && r.valor > 0)
+        .sort((a, b) => b.data.localeCompare(a.data))[0]
+    : null;
+
+  const agora = new Date();
+  const horaAgora = agora.getHours() + agora.getMinutes() / 60;
+
+  const palette = {
+    alerta: { bg: "#FCEBEB", border: "#F09595", text: "#791F1F", accent: "#A32D2D", tag: "#F09595" },
+    positivo: { bg: "#EAF3DE", border: "#C0DD97", text: "#27500A", accent: "#3B6D11", tag: "#C0DD97" },
+    neutral: { bg: "#F7F6F2", border: "#e0deda", text: "#555", accent: "#888", tag: "#e0deda" },
+  };
+
+  let tone = "neutral", icon = "💡", title = "", msg = "", detalhes = null;
+
+  if (!ontem) {
+    icon = "💡";
+    title = "Base de comparação em construção";
+    msg = "Ainda não há histórico de ontem. Salve os números hoje e a Luma começa a te mostrar o ritmo comparado a partir de amanhã.";
+  } else if (venda === null || venda === undefined) {
+    icon = "📝";
+    title = "Preencha o faturamento de hoje";
+    msg = "Ontem (" + ontem.data.split("-").reverse().slice(0, 2).join("/") + ") fechou em " + formatBRLInt(ontem.valor) + ". Atualize a venda de hoje no Cockpit para a Luma comparar o ritmo.";
+  } else {
+    const tsOntem = ontem.atualizadoEm ? new Date(ontem.atualizadoEm) : null;
+    const horaRefOntem = tsOntem && !isNaN(tsOntem) ? (tsOntem.getHours() + tsOntem.getMinutes() / 60) : 24;
+    const horaCmp = Math.min(horaAgora, horaRefOntem);
+    const esperado = horaRefOntem > 0 ? ontem.valor * (horaCmp / horaRefOntem) : ontem.valor;
+    const variacao = esperado > 0 ? (venda - esperado) / esperado : 0;
+
+    detalhes = { venda, esperado, variacao, ontem, horaRefOntem };
+
+    if (variacao <= -0.10) {
+      tone = "alerta";
+      icon = "⚠️";
+      title = "Atenção: Ritmo de vendas abaixo de ontem";
+      msg = "Verifique a categoria de Eletro. Cheque matriz de competitividade (top SKUs 18877 · 19364 · 29057), rupturas e se algum concorrente rodou promoção relâmpago.";
+    } else if (variacao >= 0.05) {
+      tone = "positivo";
+      icon = "🚀";
+      title = "Parabéns! Ritmo acelerado comparado a ontem";
+      msg = "Bom momento pra pisar fundo. Identifique a categoria que está puxando e documente no diário o que funcionou — vira caso pro weekly.";
+    } else {
+      tone = "neutral";
+      icon = "📊";
+      title = "Ritmo alinhado com ontem";
+      msg = "Variação pequena em relação ao esperado. Mantém o plano e reavalia no próximo ponto de checagem.";
+    }
+  }
+
+  const c = palette[tone];
+
+  return (
+    <div style={{
+      background: c.bg,
+      border: "0.5px solid " + c.border,
+      borderRadius: 16,
+      padding: "18px 22px",
+      marginBottom: "2.5rem",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 10, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: c.accent, letterSpacing: "0.1em", textTransform: "uppercase" }}>Insights</span>
+          <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 4, background: c.tag, color: c.accent }}>
+            {tone === "alerta" ? "ALERTA" : tone === "positivo" ? "ACELERANDO" : "OBSERVANDO"}
+          </span>
+        </div>
+        {ontem && (
+          <span style={{ fontSize: 10, color: c.accent, fontWeight: 500 }}>
+            base: {ontem.data.split("-").reverse().slice(0, 2).join("/")}
+            {ontem.atualizadoEm && !isNaN(new Date(ontem.atualizadoEm)) && (
+              " às " + new Date(ontem.atualizadoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+            )}
+          </span>
+        )}
+      </div>
+
+      <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+        <div style={{ fontSize: 26, lineHeight: 1, flexShrink: 0 }}>{icon}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: c.text, lineHeight: 1.35, marginBottom: 5, letterSpacing: "-0.02em" }}>{title}</div>
+          <div style={{ fontSize: 13, color: c.text, lineHeight: 1.55, opacity: 0.9 }}>{msg}</div>
+        </div>
+      </div>
+
+      {detalhes && (
+        <div style={{
+          marginTop: 14, paddingTop: 12, borderTop: "0.5px solid rgba(0,0,0,0.08)",
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12,
+          fontVariantNumeric: "tabular-nums",
+        }}>
+          <div>
+            <div style={{ fontSize: 10, color: c.accent, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 3 }}>Hoje</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: c.text }}>{formatBRLInt(detalhes.venda)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: c.accent, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 3 }}>Esperado (pro-rata)</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: c.text }}>{formatBRLInt(detalhes.esperado)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: c.accent, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 3 }}>Variação</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: c.text }}>
+              {detalhes.variacao >= 0 ? "+" : ""}{(detalhes.variacao * 100).toFixed(1)}%
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── GRÁFICO DE CORRELAÇÃO · registros vs batimento de meta ───────────────────
+
+function GraficoCorrelacao({ registros, historico }) {
+  const regsByDate = {};
+  (registros || []).forEach(r => {
+    const d = new Date(r.id);
+    if (isNaN(d)) return;
+    const key = d.toISOString().split("T")[0];
+    regsByDate[key] = (regsByDate[key] || 0) + 1;
+  });
+
+  const metaByDate = {};
+  (historico || []).forEach(h => {
+    if (h && h.data && typeof h.valor === "number" && typeof h.meta === "number" && h.meta > 0) {
+      metaByDate[h.data] = (h.valor / h.meta) * 100;
+    }
+  });
+
+  const allDates = Array.from(new Set([
+    ...Object.keys(regsByDate),
+    ...Object.keys(metaByDate),
+  ]));
+
+  const LIMIT = 7;
+  const rows = allDates.map(d => ({
+    data: d,
+    regs: regsByDate[d] || 0,
+    pct: typeof metaByDate[d] === "number" ? metaByDate[d] : null,
+  }));
+
+  const topRegs = [...rows]
+    .filter(x => x.regs > 0)
+    .sort((a, b) => b.regs - a.regs || (b.pct || 0) - (a.pct || 0))
+    .slice(0, LIMIT);
+
+  const topMeta = [...rows]
+    .filter(x => typeof x.pct === "number")
+    .sort((a, b) => (b.pct || 0) - (a.pct || 0))
+    .slice(0, LIMIT);
+
+  const overlap = new Set(
+    topRegs.map(x => x.data).filter(d => topMeta.some(y => y.data === d))
+  );
+
+  const fmtD = (d) => d.split("-").reverse().slice(0, 2).join("/");
+  const maxRegs = Math.max(1, ...topRegs.map(x => x.regs));
+  const maxPct = Math.max(100, ...topMeta.map(x => x.pct || 0));
+
+  const vazio = topRegs.length === 0 && topMeta.length === 0;
+
+  return (
+    <div style={{
+      background: "rgba(255, 255, 255, 0.7)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(255, 255, 255, 0.5)", boxShadow: "0 1px 3px rgba(15, 23, 42, 0.04)", borderRadius: 16,
+      padding: "20px 22px", marginBottom: "2rem",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4, gap: 10, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+          Correlação
+        </span>
+        {!vazio && (
+          <span style={{ fontSize: 10, color: "#aaa", fontWeight: 500 }}>
+            top {LIMIT} de cada ranking
+          </span>
+        )}
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: "#111", marginBottom: 4, letterSpacing: "-0.02em" }}>
+        Dias com mais registros vs. dias com melhor batimento
+      </div>
+      <div style={{ fontSize: 12, color: "#888", marginBottom: 18, lineHeight: 1.5 }}>
+        Dias marcados com <span style={{ color: "#D4AF37", fontWeight: 600 }}>▲</span> aparecem em ambos os rankings — sinal de que ação registrada tende a virar número.
+      </div>
+
+      {vazio ? (
+        <div style={{
+          background: "#F7F6F2", border: "0.5px dashed #d0cfc8", borderRadius: 10,
+          padding: "18px 14px", fontSize: 12, color: "#888", textAlign: "center", lineHeight: 1.6,
+        }}>
+          Ainda não há dados suficientes.<br />
+          Salve registros no diário e atualize o Cockpit por alguns dias para ver a correlação.
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 22 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#534AB7", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 12 }}>
+              Mais registros no diário
+            </div>
+            {topRegs.length === 0 ? (
+              <div style={{ fontSize: 12, color: "#bbb" }}>nenhum registro ainda</div>
+            ) : topRegs.map(item => (
+              <div key={"r-" + item.data} style={{ marginBottom: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+                  <span style={{ fontSize: 12, color: "#555", fontWeight: 500 }}>
+                    {overlap.has(item.data) && <span style={{ color: "#D4AF37", marginRight: 4, fontWeight: 600 }}>▲</span>}
+                    {fmtD(item.data)}
+                  </span>
+                  <span style={{ fontSize: 11, color: "#888", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+                    {item.regs} {item.regs === 1 ? "reg" : "regs"}
+                    {typeof item.pct === "number" && (
+                      <span style={{ color: item.pct >= 100 ? "#3B6D11" : "#A32D2D", marginLeft: 6 }}>
+                        · {Math.round(item.pct)}%
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div style={{ height: 6, background: "#EEEDFE", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{
+                    height: 6, width: (item.regs / maxRegs * 100) + "%",
+                    background: "#534AB7", borderRadius: 3, transition: "width 0.4s " + EASE,
+                  }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#3B6D11", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 12 }}>
+              Melhor batimento de meta
+            </div>
+            {topMeta.length === 0 ? (
+              <div style={{ fontSize: 12, color: "#bbb" }}>salve valores do Cockpit para começar</div>
+            ) : topMeta.map(item => (
+              <div key={"m-" + item.data} style={{ marginBottom: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+                  <span style={{ fontSize: 12, color: "#555", fontWeight: 500 }}>
+                    {overlap.has(item.data) && <span style={{ color: "#D4AF37", marginRight: 4, fontWeight: 600 }}>▲</span>}
+                    {fmtD(item.data)}
+                  </span>
+                  <span style={{ fontSize: 11, color: item.pct >= 100 ? "#3B6D11" : "#888", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+                    {Math.round(item.pct)}%
+                    {item.regs > 0 && (
+                      <span style={{ color: "#534AB7", marginLeft: 6 }}>
+                        · {item.regs} {item.regs === 1 ? "reg" : "regs"}
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div style={{ height: 6, background: "#EAF3DE", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{
+                    height: 6, width: Math.min(100, item.pct / maxPct * 100) + "%",
+                    background: item.pct >= 100 ? "#3B6D11" : "#97C459", borderRadius: 3,
+                    transition: "width 0.4s " + EASE,
+                  }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {overlap.size > 0 && (
+        <div style={{
+          marginTop: 16, padding: "10px 14px", background: "#FFF9E6",
+          border: "0.5px solid #F0D674", borderRadius: 10, fontSize: 12,
+          color: "#8A6A10", lineHeight: 1.5,
+        }}>
+          <strong>Sinal:</strong> {overlap.size} {overlap.size === 1 ? "dia está" : "dias estão"} no top de ambos os rankings — quando você registra mais, tende a bater mais meta. Continue operando assim.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── DIÁRIO · PAINEL FIXO NO RODAPÉ ───────────────────────────────────────────
+
+function DiarioFooter({ registros, setRegistros, impactosMes, status }) {
+  const [expanded, setExpanded] = useState(false);
+  const [oq, setOq] = useState("");
+  const [ac, setAc] = useState("");
+  const [im, setIm] = useState("");
+
+  const impactoNum = parseBRL(im);
+  const pode = !!(oq || ac || impactoNum !== null);
+
+  const salvar = () => {
+    if (!pode) return;
+    const novo = {
+      id: Date.now(),
+      data: new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+      hora: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+      oq, pq: "", ac,
+      impacto: impactoNum,
+      metaSnapshot: snapshotMeta(parseBRL(status && status.venda), parseBRL(status && status.meta)),
+    };
+    setRegistros([novo, ...registros]);
+    setOq(""); setAc(""); setIm("");
+    setExpanded(false);
+  };
+
+  const fechar = () => { setOq(""); setAc(""); setIm(""); setExpanded(false); };
+
+  const inputStyle = {
+    border: "0.5px solid #e0deda", borderRadius: 8, padding: "8px 11px",
+    fontSize: 13, color: "#111", fontFamily: "'Inter', sans-serif",
+    outline: "none", background: "#FAFAF8", width: "100%", boxSizing: "border-box",
+    lineHeight: 1.4,
+  };
+  const taStyle = { ...inputStyle, resize: "none" };
+
+  return (
+    <div style={{
+      position: "fixed", bottom: 18, left: "calc(50% + 36px)",
+      transform: "translateX(-50%)",
+      zIndex: 30,
+      fontFamily: "'Inter', sans-serif",
+      width: expanded ? "min(720px, calc(100vw - 104px))" : "auto",
+      maxWidth: "calc(100vw - 104px)",
+      transition: "width 260ms cubic-bezier(0.22, 1, 0.36, 1)",
+    }}>
+      <div style={{
+        background: "rgba(255, 255, 255, 0.82)",
+        backdropFilter: "blur(14px) saturate(160%)",
+        WebkitBackdropFilter: "blur(14px) saturate(160%)",
+        border: "0.5px solid rgba(0, 0, 0, 0.06)",
+        borderRadius: 32,
+        boxShadow: "0 10px 32px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.04)",
+        overflow: "hidden",
+        transition: "padding 260ms cubic-bezier(0.22, 1, 0.36, 1)",
+        padding: expanded ? "16px 18px" : "6px 8px 6px 14px",
+      }}>
+        {!expanded ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, whiteSpace: "nowrap" }}>
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "4px 10px", borderRadius: 999,
+              background: "#DDF1F1", color: "#0C6170",
+              fontSize: 11, fontWeight: 600,
+              fontVariantNumeric: "tabular-nums",
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#0C6170" }} />
+              {impactosMes} {impactosMes === 1 ? "impacto" : "impactos"}
+            </span>
+            <button
+              onClick={() => setExpanded(true)}
+              style={{
+                padding: "8px 16px", borderRadius: 999,
+                border: "none", background: "#111", color: "#fff",
+                fontSize: 12.5, fontWeight: 600,
+                cursor: "pointer", fontFamily: "'Inter', sans-serif",
+                letterSpacing: "-0.005em",
+                display: "inline-flex", alignItems: "center", gap: 6,
+              }}
+            >
+              <span style={{ fontSize: 14, lineHeight: 1 }}>+</span>
+              Registrar impacto
+            </button>
+          </div>
+        ) : (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, padding: "0 4px" }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#111" }}>
+                Novo registro · {new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long" })}
+              </span>
+              <button onClick={fechar} style={{ fontSize: 20, color: "#aaa", background: "none", border: "none", cursor: "pointer", padding: "0 4px", lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: "#854F0B", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 5 }}>O quê fiz</div>
+                <textarea value={oq} onChange={e => setOq(e.target.value)} placeholder="ex: identifiquei SKU fora do ar" rows={2} style={taStyle} />
+              </div>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: "#3B6D11", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 5 }}>Ação</div>
+                <textarea value={ac} onChange={e => setAc(e.target.value)} placeholder="ex: acionei o comprador" rows={2} style={taStyle} />
+              </div>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: "#0C6170", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 5 }}>Impacto financeiro (R$)</div>
+                <input value={im} onChange={e => setIm(e.target.value)} placeholder="ex: 1500 · -800" inputMode="decimal" style={inputStyle} />
+                {im && impactoNum !== null && (
+                  <div style={{ fontSize: 10, color: impactoNum < 0 ? "#A32D2D" : "#166534", marginTop: 4, fontWeight: 500 }}>= {formatBRL(impactoNum)}</div>
+                )}
+                {im && impactoNum === null && (
+                  <div style={{ fontSize: 10, color: "#A32D2D", marginTop: 4 }}>valor inválido</div>
+                )}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "flex-end", padding: "0 4px" }}>
+              <span style={{ fontSize: 11, color: "#aaa", marginRight: "auto" }}>
+                {impactosMes} {impactosMes === 1 ? "impacto registrado" : "impactos registrados"} este mês
+              </span>
+              <Btn small onClick={fechar}>Cancelar</Btn>
+              <Btn primary small onClick={salvar} disabled={!pode}>Salvar registro</Btn>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── MODAL: CONFIGURAÇÕES (BACKUP / RESTAURAÇÃO) ─────────────────────────────
+
+function SettingsModal({ open, onClose }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const fileRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) { setMsg(null); setBusy(false); }
+  }, [open]);
+
+  if (!open) return null;
+
+  const exportar = () => {
+    try {
+      const dados = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k !== null) dados[k] = localStorage.getItem(k);
+      }
+      const payload = {
+        app: "Central Thaylane",
+        versao: 1,
+        exportadoEm: new Date().toISOString(),
+        dados,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const ts = new Date().toISOString().split("T")[0];
+      a.download = "central-thaylane-backup-" + ts + ".json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 500);
+      const total = Object.keys(dados).length;
+      setMsg({ tipo: "ok", texto: "Backup exportado · " + total + " " + (total === 1 ? "registro" : "registros") });
+    } catch (err) {
+      setMsg({ tipo: "erro", texto: "Não foi possível exportar. Tente novamente." });
+    }
+  };
+
+  const escolherArquivo = () => {
+    setMsg(null);
+    if (fileRef.current) fileRef.current.click();
+  };
+
+  const aoLerArquivo = (e) => {
+    const arquivo = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!arquivo) return;
+    const reader = new FileReader();
+    setBusy(true);
+    reader.onload = () => {
+      try {
+        const conteudo = JSON.parse(reader.result);
+        const dados = conteudo && conteudo.dados && typeof conteudo.dados === "object"
+          ? conteudo.dados
+          : conteudo;
+        if (!dados || typeof dados !== "object" || Array.isArray(dados)) {
+          throw new Error("Formato inválido");
+        }
+        const confirma = window.confirm(
+          "Restaurar este backup?\n\nSuas anotações, checklist e impactos atuais serão substituídos. A página será recarregada ao final."
+        );
+        if (!confirma) { setBusy(false); return; }
+
+        Object.keys(dados).forEach(k => {
+          const v = dados[k];
+          localStorage.setItem(k, typeof v === "string" ? v : JSON.stringify(v));
+        });
+        setMsg({ tipo: "ok", texto: "Restauração concluída. Recarregando..." });
+        setTimeout(() => window.location.reload(), 900);
+      } catch (err) {
+        setBusy(false);
+        setMsg({ tipo: "erro", texto: "Arquivo inválido. Use um backup exportado pela Central." });
+      }
+    };
+    reader.onerror = () => {
+      setBusy(false);
+      setMsg({ tipo: "erro", texto: "Não foi possível ler o arquivo." });
+    };
+    reader.readAsText(arquivo);
+  };
+
+  const IconDownload = (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v12" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M5 21h14" />
+    </svg>
+  );
+  const IconUpload = (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 15V3" />
+      <path d="m7 8 5-5 5 5" />
+      <path d="M5 21h14" />
+    </svg>
+  );
+
+  const ActionCard = ({ icon, titulo, desc, onClick, primary }) => {
+    const [hover, setHover] = useState(false);
+    return (
+      <button
+        onClick={onClick}
+        disabled={busy}
+        onMouseEnter={() => !busy && setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        style={{
+          width: "100%",
+          display: "flex", alignItems: "center", gap: 14,
+          padding: "14px 16px",
+          borderRadius: 14,
+          border: "0.5px solid " + (hover ? "#d4d4d4" : "#ececec"),
+          background: hover ? "#FAFAFA" : "#fff",
+          textAlign: "left",
+          cursor: busy ? "default" : "pointer",
+          fontFamily: "'Inter', sans-serif",
+          transition: "all 0.2s " + EASE,
+          opacity: busy ? 0.5 : 1,
+        }}
+      >
+        <div style={{
+          width: 38, height: 38, borderRadius: 10,
+          background: primary ? "#111" : "#F3F4F6",
+          color: primary ? "#fff" : "#111",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0,
+          transition: "all 0.2s " + EASE,
+        }}>{icon}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#111", letterSpacing: "-0.01em", marginBottom: 2 }}>{titulo}</div>
+          <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.45 }}>{desc}</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={hover ? "#111" : "#c7c7c7"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "all 0.2s " + EASE, flexShrink: 0 }}>
+          <path d="m9 18 6-6-6-6" />
+        </svg>
+      </button>
+    );
+  };
+
+  return (
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0,
+      background: "rgba(15, 23, 42, 0.45)",
+      backdropFilter: "blur(6px)",
+      WebkitBackdropFilter: "blur(6px)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      zIndex: 100, padding: 24,
+      fontFamily: "'Inter', sans-serif",
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: "#fff", borderRadius: 22,
+        maxWidth: 460, width: "100%",
+        boxShadow: "0 24px 60px rgba(15, 23, 42, 0.28)",
+        overflow: "hidden",
+      }}>
+        <div style={{ padding: "22px 24px 18px", borderBottom: "0.5px solid #f1f1f1", display: "flex", alignItems: "flex-start" }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: "#111", letterSpacing: "-0.015em" }}>Configurações</div>
+            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>Backup e restauração das suas anotações</div>
+          </div>
+          <button onClick={onClose} aria-label="Fechar" style={{ fontSize: 22, color: "#9ca3af", background: "none", border: "none", cursor: "pointer", padding: "0 4px", lineHeight: 1 }}>×</button>
+        </div>
+
+        <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+          <ActionCard
+            icon={IconDownload}
+            titulo="Exportar dados"
+            desc="Salva um arquivo .json com todas as suas anotações, checklist e impactos."
+            onClick={exportar}
+            primary
+          />
+          <ActionCard
+            icon={IconUpload}
+            titulo="Importar dados"
+            desc="Restaure um backup anterior para carregar suas anotações em outro computador."
+            onClick={escolherArquivo}
+          />
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            onChange={aoLerArquivo}
+            style={{ display: "none" }}
+          />
+
+          {msg && (
+            <div style={{
+              marginTop: 4,
+              padding: "10px 12px",
+              borderRadius: 10,
+              fontSize: 12,
+              background: msg.tipo === "ok" ? "#ECFDF5" : "#FEF2F2",
+              color: msg.tipo === "ok" ? "#065F46" : "#991B1B",
+              border: "0.5px solid " + (msg.tipo === "ok" ? "#A7F3D0" : "#FECACA"),
+            }}>{msg.texto}</div>
+          )}
+        </div>
+
+        <div style={{ padding: "12px 20px 16px", borderTop: "0.5px solid #f1f1f1", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ fontSize: 11, color: "#9ca3af", letterSpacing: "0.005em" }}>Seus dados ficam apenas neste dispositivo.</div>
+          <Btn small onClick={onClose}>Fechar</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── SIDEBAR ──────────────────────────────────────────────────────────────────
+
+function Sidebar({ view, setView, pendenciaImpacto }) {
+  const [configOpen, setConfigOpen] = useState(false);
+  const IconPainel = (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="9" rx="1.5" />
+      <rect x="14" y="3" width="7" height="5" rx="1.5" />
+      <rect x="14" y="12" width="7" height="9" rx="1.5" />
+      <rect x="3" y="16" width="7" height="5" rx="1.5" />
+    </svg>
+  );
+  const IconAnalise = (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 3v17a1 1 0 0 0 1 1h17" />
+      <path d="M7 16V11" />
+      <path d="M12 16V8" />
+      <path d="M17 16v-3" />
+    </svg>
+  );
+  const IconHistorico = (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+  const IconSemana = (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <line x1="3" y1="9" x2="21" y2="9" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="13" x2="8" y2="17" />
+      <line x1="13" y1="13" x2="13" y2="17" />
+    </svg>
+  );
+  const IconConfig = (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  );
+
+  const items = [
+    { id: "painel", label: "Painel de Controle", icon: IconPainel },
+    { id: "analise", label: "Análise de Dados", icon: IconAnalise },
+    { id: "semana", label: "Planejamento da Semana", icon: IconSemana },
+    { id: "historico", label: "Histórico de Impacto", icon: IconHistorico },
+  ];
+
+  return (
+    <nav style={{
+      position: "fixed", left: 0, top: 0, bottom: 0, width: 72,
+      background: "#ffffff",
+      borderRight: "0.5px solid #e5e7eb",
+      display: "flex", flexDirection: "column", alignItems: "center",
+      padding: "20px 0", gap: 6,
+      zIndex: 25,
+      fontFamily: "'Inter', sans-serif",
+    }}>
+      <div style={{
+        width: 36, height: 36, borderRadius: 10, background: "#111",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 16, marginBottom: 22,
+      }}>⚡</div>
+
+      {items.map(item => {
+        const active = view === item.id;
+        const alerta = item.id === "historico" && pendenciaImpacto && !active;
+        const corIdle = alerta ? "#F59E0B" : "#8a8a8a";
+        const corHover = alerta ? "#B45309" : "#111";
+        return (
+          <button
+            key={item.id}
+            onClick={() => setView(item.id)}
+            title={alerta ? item.label + " · impacto financeiro do dia pendente" : item.label}
+            aria-label={item.label}
+            aria-current={active ? "page" : undefined}
+            style={{
+              position: "relative",
+              width: 44, height: 44, borderRadius: 12,
+              border: "none",
+              background: active ? "#111" : alerta ? "#FEF3C7" : "transparent",
+              color: active ? "#fff" : corIdle,
+              cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "background 0.2s " + EASE + ", color 0.2s " + EASE,
+            }}
+            onMouseEnter={e => { if (!active) { e.currentTarget.style.background = alerta ? "#FDE68A" : "#F3F4F6"; e.currentTarget.style.color = corHover; } }}
+            onMouseLeave={e => { if (!active) { e.currentTarget.style.background = alerta ? "#FEF3C7" : "transparent"; e.currentTarget.style.color = corIdle; } }}
+          >
+            {item.icon}
+            {alerta && (
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute", top: 6, right: 6,
+                  width: 8, height: 8, borderRadius: "50%",
+                  background: "#F59E0B",
+                  boxShadow: "0 0 0 2px #fff",
+                }}
+              />
+            )}
+          </button>
+        );
+      })}
+
+      <button
+        onClick={() => setConfigOpen(true)}
+        title="Configurações"
+        aria-label="Configurações"
+        style={{
+          marginTop: "auto",
+          width: 44, height: 44, borderRadius: 12,
+          border: "none",
+          background: "transparent",
+          color: "#b0b0b0",
+          cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "background 0.2s " + EASE + ", color 0.2s " + EASE,
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.color = "#111"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#b0b0b0"; }}
+      >
+        {IconConfig}
+      </button>
+
+      <SettingsModal open={configOpen} onClose={() => setConfigOpen(false)} />
+    </nav>
+  );
+}
+
+// ── LISTA DE QUERIES POR SEÇÃO ─────────────────────────────────────────────
+
+function QueriesFaseList({ queryIds, usadas, setUsadas, ativa }) {
+  const [queryOpen, setQueryOpen] = useState(null);
+
+  const lista = QUERIES.filter(q => queryIds.indexOf(q.id) !== -1);
+
+  const abrir = (q) => {
+    setQueryOpen(q);
+    if (!usadas[q.id]) setUsadas({ ...usadas, [q.id]: Date.now() });
+  };
+
+  if (lista.length === 0) return null;
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+        Queries
+      </div>
+      {lista.map(q => {
+        const usada = !!usadas[q.id];
+        const emAnalise = !usada && ativa;
+        const status = usada ? "concluido" : emAnalise ? "analise" : "aguardando";
+        return (
+          <div key={q.id} style={{
+            background: "#fff",
+            border: "0.5px solid #e5e7eb",
+            borderLeft: "3px solid " + STATUS[status],
+            borderRadius: 12,
+            padding: "10px 14px 10px 13px",
+            marginBottom: 8,
+            display: "flex", alignItems: "center", gap: 10,
+            transition: "all 0.25s " + EASE,
+          }}>
+            <span style={{
+              flex: 1, minWidth: 0,
+              fontSize: 13, fontWeight: 600, color: "#111",
+              letterSpacing: "-0.005em",
+            }}>{q.label}</span>
+            {usada && (
+              <span style={{ fontSize: 10, fontWeight: 600, color: "#166534", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                consultada
+              </span>
+            )}
+            <button
+              onClick={() => abrir(q)}
+              style={{
+                fontSize: 11, fontWeight: 600,
+                padding: "6px 14px", borderRadius: 999,
+                border: "0.5px solid " + (usada ? "#d1d5db" : "#111"),
+                background: usada ? "#F9FAFB" : "#111",
+                color: usada ? "#111" : "#fff",
+                cursor: "pointer",
+                fontFamily: "'Inter', sans-serif",
+                letterSpacing: "0.005em",
+                whiteSpace: "nowrap",
+                transition: "all 0.2s " + EASE,
+              }}
+            >
+              {usada ? "Abrir de novo" : "Abrir SQL"}
+            </button>
+          </div>
+        );
+      })}
+      <QueryModal query={queryOpen} onClose={() => setQueryOpen(null)} />
+    </div>
+  );
+}
+
+// ── HELPERS DE DATA / RELATÓRIO ──────────────────────────────────────────────
+
+const toYMD = (d) => {
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const dia = String(d.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+};
+
+const fromYMD = (ymd) => {
+  const [a, m, d] = ymd.split("-").map(Number);
+  return new Date(a, m - 1, d);
+};
+
+const formatDataBR = (ymd) => {
+  if (!ymd) return "";
+  const [a, m, d] = ymd.split("-");
+  return `${d}/${m}/${a}`;
+};
+
+const DIAS_SEMANA_LONGO = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+
+const formatDataLongaBR = (ymd) => {
+  const d = fromYMD(ymd);
+  return `${DIAS_SEMANA_LONGO[d.getDay()]}, ${formatDataBR(ymd)}`;
+};
+
+const rangeDeDias = (inicio, fim) => {
+  const dias = [];
+  const d = fromYMD(inicio);
+  const end = fromYMD(fim);
+  while (d <= end) {
+    dias.push(toYMD(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return dias;
+};
+
+const presetsPeriodo = () => {
+  const hoje = new Date();
+  const ontem = new Date(hoje); ontem.setDate(ontem.getDate() - 1);
+  const diaSemana = hoje.getDay();
+  const segundaAtual = new Date(hoje); segundaAtual.setDate(hoje.getDate() - ((diaSemana + 6) % 7));
+  const segundaAnt = new Date(segundaAtual); segundaAnt.setDate(segundaAnt.getDate() - 7);
+  const sextaAnt = new Date(segundaAnt); sextaAnt.setDate(sextaAnt.getDate() + 4);
+  const ultimos7 = new Date(hoje); ultimos7.setDate(hoje.getDate() - 6);
+  const mesInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  return {
+    hoje:         { inicio: toYMD(hoje),         fim: toYMD(hoje),         label: "Hoje" },
+    ontem:        { inicio: toYMD(ontem),        fim: toYMD(ontem),        label: "Ontem" },
+    estaSemana:   { inicio: toYMD(segundaAtual), fim: toYMD(hoje),         label: "Esta semana" },
+    semanaPass:   { inicio: toYMD(segundaAnt),   fim: toYMD(sextaAnt),     label: "Semana passada" },
+    ultimos7:     { inicio: toYMD(ultimos7),     fim: toYMD(hoje),         label: "Últimos 7 dias" },
+    mes:          { inicio: toYMD(mesInicio),    fim: toYMD(hoje),         label: "Este mês" },
+  };
+};
+
+const lerObsData = (ymd) => {
+  try {
+    const raw = localStorage.getItem("obs_" + ymd);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+// Monta um relatório estruturado por dia (para texto, preview e PDF)
+function gerarDadosRelatorio({ inicio, fim, registros }) {
+  const dias = rangeDeDias(inicio, fim);
+  const checklistItensMap = {};
+  CHECKLIST.forEach(b => b.items.forEach(it => {
+    checklistItensMap[it.id] = { tarefa: it.texto, bloco: b.label, hora: b.hora };
+  }));
+
+  const porDia = dias.map(ymd => {
+    const obs = lerObsData(ymd);
+    const observacoes = Object.entries(obs)
+      .filter(([, v]) => (v || "").trim())
+      .map(([id, v]) => ({
+        id,
+        texto: v.trim(),
+        tarefa: (checklistItensMap[id] && checklistItensMap[id].tarefa) || id,
+        bloco: (checklistItensMap[id] && checklistItensMap[id].bloco) || "",
+        hora: (checklistItensMap[id] && checklistItensMap[id].hora) || "",
+      }));
+
+    const regs = registros
+      .filter(r => toYMD(new Date(r.id)) === ymd)
+      .sort((a, b) => a.id - b.id);
+
+    return { ymd, observacoes, registros: regs };
+  });
+
+  const totalRegistros = porDia.reduce((s, d) => s + d.registros.length, 0);
+  const totalObs = porDia.reduce((s, d) => s + d.observacoes.length, 0);
+  const impactoTotal = porDia.reduce((s, d) =>
+    s + d.registros.reduce((s2, r) => s2 + (typeof r.impacto === "number" ? r.impacto : 0), 0)
+  , 0);
+  const diasComAtividade = porDia.filter(d => d.observacoes.length > 0 || d.registros.length > 0).length;
+
+  return { dias, porDia, totalRegistros, totalObs, impactoTotal, diasComAtividade };
+}
+
+// Texto puro (para clipboard / .txt)
+function gerarRelatorioTexto({ inicio, fim, registros }) {
+  const dados = gerarDadosRelatorio({ inicio, fim, registros });
+  const linhas = [];
+  const agora = new Date();
+  const geradoEm = `${String(agora.getDate()).padStart(2, "0")}/${String(agora.getMonth() + 1).padStart(2, "0")}/${agora.getFullYear()} às ${String(agora.getHours()).padStart(2, "0")}:${String(agora.getMinutes()).padStart(2, "0")}`;
+
+  linhas.push("═══════════════════════════════════════════");
+  linhas.push("RELATÓRIO · Central Thaylane");
+  linhas.push("═══════════════════════════════════════════");
+  linhas.push(`Período: ${formatDataBR(inicio)} a ${formatDataBR(fim)} (${dados.dias.length} ${dados.dias.length === 1 ? "dia" : "dias"})`);
+  linhas.push(`Gerado em: ${geradoEm}`);
+  linhas.push("");
+  linhas.push("── RESUMO ─────────────────────────────────");
+  linhas.push(`• Dias com atividade: ${dados.diasComAtividade} de ${dados.dias.length}`);
+  linhas.push(`• Registros no diário: ${dados.totalRegistros}`);
+  linhas.push(`• Observações do checklist: ${dados.totalObs}`);
+  if (dados.impactoTotal !== 0) {
+    linhas.push(`• Impacto financeiro acumulado: ${formatBRL(dados.impactoTotal)}`);
+  }
+  linhas.push("");
+
+  dados.porDia.forEach(dia => {
+    if (dia.observacoes.length === 0 && dia.registros.length === 0) return;
+
+    linhas.push(`━━━ ${formatDataLongaBR(dia.ymd)} ━━━`);
+    linhas.push("");
+
+    if (dia.registros.length > 0) {
+      linhas.push(`Registros do diário (${dia.registros.length}):`);
+      dia.registros.forEach(r => {
+        linhas.push(`  [${r.hora}]`);
+        if (r.oq) linhas.push(`    O QUÊ:   ${r.oq}`);
+        if (r.pq) linhas.push(`    POR QUÊ: ${r.pq}`);
+        if (r.ac) linhas.push(`    AÇÃO:    ${r.ac}`);
+        if (typeof r.impacto === "number") linhas.push(`    IMPACTO: ${formatBRL(r.impacto)}`);
+        linhas.push("");
+      });
+    }
+
+    if (dia.observacoes.length > 0) {
+      linhas.push(`Observações do checklist (${dia.observacoes.length}):`);
+      dia.observacoes.forEach(o => {
+        linhas.push(`  • [${o.hora}] ${o.tarefa}`);
+        linhas.push(`    → ${o.texto}`);
+      });
+      linhas.push("");
+    }
+  });
+
+  if (dados.diasComAtividade === 0) {
+    linhas.push("Nenhum registro ou observação no período selecionado.");
+    linhas.push("");
+  }
+
+  linhas.push("───────────────────────────────────────────");
+  linhas.push("Fim do relatório · Central Thaylane");
+
+  return linhas.join("\n");
+}
+
+// HTML estilizado para janela de impressão/PDF
+function gerarRelatorioHTML({ inicio, fim, registros }) {
+  const dados = gerarDadosRelatorio({ inicio, fim, registros });
+  const agora = new Date();
+  const geradoEm = `${String(agora.getDate()).padStart(2, "0")}/${String(agora.getMonth() + 1).padStart(2, "0")}/${agora.getFullYear()} às ${String(agora.getHours()).padStart(2, "0")}:${String(agora.getMinutes()).padStart(2, "0")}`;
+
+  const esc = (s) => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+
+  const corpoDias = dados.porDia
+    .filter(d => d.observacoes.length > 0 || d.registros.length > 0)
+    .map(dia => {
+      const registrosHTML = dia.registros.length === 0 ? "" : `
+        <div class="sub">Registros do diário (${dia.registros.length})</div>
+        ${dia.registros.map(r => `
+          <div class="item">
+            <div class="meta">${esc(r.hora)}${typeof r.impacto === "number" ? ` · <strong style="color:${r.impacto >= 0 ? "#166534" : "#A32D2D"}">${esc(formatBRL(r.impacto))}</strong>` : ""}</div>
+            ${r.oq ? `<div><span class="tag oq">O QUÊ</span> ${esc(r.oq)}</div>` : ""}
+            ${r.pq ? `<div><span class="tag pq">POR QUÊ</span> ${esc(r.pq)}</div>` : ""}
+            ${r.ac ? `<div><span class="tag ac">AÇÃO</span> ${esc(r.ac)}</div>` : ""}
+          </div>
+        `).join("")}
+      `;
+
+      const obsHTML = dia.observacoes.length === 0 ? "" : `
+        <div class="sub">Observações do checklist (${dia.observacoes.length})</div>
+        <ul class="obs">
+          ${dia.observacoes.map(o => `
+            <li>
+              <span class="hora">${esc(o.hora)}</span>
+              <strong>${esc(o.tarefa)}</strong>
+              <div class="obs-texto">${esc(o.texto)}</div>
+            </li>
+          `).join("")}
+        </ul>
+      `;
+
+      return `
+        <section class="dia">
+          <h2>${esc(formatDataLongaBR(dia.ymd))}</h2>
+          ${registrosHTML}
+          ${obsHTML}
+        </section>
+      `;
+    }).join("");
+
+  const vazioHTML = dados.diasComAtividade === 0
+    ? `<div class="vazio">Nenhum registro ou observação no período selecionado.</div>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Relatório · Central Thaylane · ${formatDataBR(inicio)} a ${formatDataBR(fim)}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #111; line-height: 1.55;
+      max-width: 820px; margin: 40px auto; padding: 0 32px;
+      font-size: 13px;
+    }
+    header { border-bottom: 2px solid #111; padding-bottom: 14px; margin-bottom: 22px; }
+    header h1 { margin: 0 0 4px; font-size: 20px; letter-spacing: -0.01em; }
+    header .periodo { font-size: 13px; color: #444; font-weight: 500; }
+    header .gerado { font-size: 11px; color: #888; margin-top: 4px; }
+
+    .resumo { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px 18px; margin-bottom: 24px; }
+    .resumo h3 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #64748B; }
+    .resumo ul { margin: 0; padding-left: 18px; }
+    .resumo li { margin: 2px 0; font-size: 13px; }
+    .resumo strong { color: #0F172A; }
+
+    section.dia { margin-bottom: 26px; page-break-inside: avoid; }
+    section.dia h2 {
+      font-size: 14px; margin: 0 0 10px;
+      padding: 6px 12px; border-radius: 6px;
+      background: #EEEDFE; color: #3B338F;
+      letter-spacing: -0.005em;
+    }
+    .sub {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+      color: #64748B; font-weight: 600;
+      margin: 12px 0 6px;
+    }
+
+    .item {
+      background: #fff; border: 0.5px solid #E2E8F0; border-left: 3px solid #185FA5;
+      border-radius: 8px; padding: 8px 12px; margin-bottom: 6px;
+    }
+    .item .meta { font-size: 11px; color: #64748B; margin-bottom: 4px; }
+    .tag {
+      display: inline-block; font-size: 9px; font-weight: 600;
+      padding: 1px 6px; border-radius: 3px; margin-right: 6px;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      vertical-align: middle;
+    }
+    .tag.oq { background: #FAEEDA; color: #854F0B; }
+    .tag.pq { background: #E6F1FB; color: #185FA5; }
+    .tag.ac { background: #EAF3DE; color: #3B6D11; }
+
+    ul.obs { list-style: none; padding: 0; margin: 0; }
+    ul.obs li {
+      background: #FFFBEB; border: 0.5px solid #FDE68A;
+      border-radius: 6px; padding: 6px 10px; margin-bottom: 5px;
+    }
+    ul.obs .hora {
+      display: inline-block; font-size: 9px; font-weight: 600;
+      padding: 1px 6px; border-radius: 3px; margin-right: 6px;
+      background: #F1EFE8; color: #444441;
+    }
+    ul.obs .obs-texto { font-style: italic; color: #3B2F00; margin-top: 3px; font-size: 12px; }
+
+    .vazio {
+      padding: 40px; text-align: center;
+      background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 10px;
+      color: #64748B;
+    }
+
+    footer { margin-top: 28px; padding-top: 14px; border-top: 1px solid #E2E8F0; font-size: 10px; color: #94A3B8; text-align: center; }
+
+    @media print {
+      body { margin: 0; padding: 18mm 14mm; font-size: 11px; max-width: none; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Relatório · Central Thaylane</h1>
+    <div class="periodo">Período: ${esc(formatDataBR(inicio))} a ${esc(formatDataBR(fim))} (${dados.dias.length} ${dados.dias.length === 1 ? "dia" : "dias"})</div>
+    <div class="gerado">Gerado em ${esc(geradoEm)}</div>
+  </header>
+
+  <div class="resumo">
+    <h3>Resumo</h3>
+    <ul>
+      <li>Dias com atividade: <strong>${dados.diasComAtividade}</strong> de ${dados.dias.length}</li>
+      <li>Registros no diário: <strong>${dados.totalRegistros}</strong></li>
+      <li>Observações do checklist: <strong>${dados.totalObs}</strong></li>
+      ${dados.impactoTotal !== 0 ? `<li>Impacto financeiro acumulado: <strong style="color:${dados.impactoTotal >= 0 ? "#166534" : "#A32D2D"}">${esc(formatBRL(dados.impactoTotal))}</strong></li>` : ""}
+    </ul>
+  </div>
+
+  ${corpoDias}
+  ${vazioHTML}
+
+  <footer>Central Thaylane · Relatório gerado automaticamente · ${esc(geradoEm)}</footer>
+\x3c/body\x3e
+\x3c/html\x3e`;
+  // Os closing tags acima usam escape hex (\x3c = menor-que) de proposito.
+  // Em runtime viram as tags HTML corretas, mas no arquivo em disco nao
+  // aparecem literais — isso evita que o Live Server injete o script de
+  // auto-reload aqui dentro desta template literal (ele procura o primeiro
+  // fechamento de body no arquivo e injeta antes dele).
+}
+
+// ── RELATÓRIO MODAL ──────────────────────────────────────────────────────────
+
+function RelatorioModal({ inicio, fim, registros, onClose }) {
+  const [copiado, setCopiado] = useState(false);
+  const [baixado, setBaixado] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const texto = gerarRelatorioTexto({ inicio, fim, registros });
+  const dados = gerarDadosRelatorio({ inicio, fim, registros });
+
+  const copiar = () => {
+    navigator.clipboard.writeText(texto).then(() => {
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2200);
+    });
+  };
+
+  const baixarTxt = () => {
+    const blob = new Blob([texto], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `relatorio_central_thaylane_${inicio}_a_${fim}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setBaixado(true);
+    setTimeout(() => setBaixado(false), 2200);
+  };
+
+  const imprimir = () => {
+    const html = gerarRelatorioHTML({ inicio, fim, registros });
+    const w = window.open("", "_blank", "width=900,height=700");
+    if (!w) {
+      alert("O navegador bloqueou a janela de impressão. Libere pop-ups para este site.");
+      return;
+    }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => {
+      try { w.print(); } catch {}
+    }, 350);
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0,
+        background: "rgba(15, 23, 42, 0.5)",
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        zIndex: 200, padding: 24,
+        fontFamily: "'Inter', sans-serif",
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: "#fff", borderRadius: 18,
+          maxWidth: 760, width: "100%", maxHeight: "85vh",
+          display: "flex", flexDirection: "column",
+          boxShadow: "0 30px 70px rgba(15, 23, 42, 0.32)",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ padding: "16px 22px 12px", borderBottom: "0.5px solid #e5e7eb", display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#64748B", marginBottom: 4 }}>
+              Relatório pronto para envio
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: "#111", letterSpacing: "-0.01em" }}>
+              {formatDataBR(inicio)} a {formatDataBR(fim)}
+            </div>
+            <div style={{ fontSize: 12, color: "#64748B", marginTop: 4 }}>
+              {dados.diasComAtividade} de {dados.dias.length} dias com atividade ·{" "}
+              {dados.totalRegistros} {dados.totalRegistros === 1 ? "registro" : "registros"} ·{" "}
+              {dados.totalObs} {dados.totalObs === 1 ? "observação" : "observações"}
+              {dados.impactoTotal !== 0 && ` · impacto ${formatBRL(dados.impactoTotal)}`}
+            </div>
+          </div>
+          <button onClick={onClose} aria-label="Fechar" style={{ fontSize: 22, color: "#9ca3af", background: "none", border: "none", cursor: "pointer", padding: "0 4px", lineHeight: 1 }}>×</button>
+        </div>
+
+        <div style={{ flex: 1, overflow: "auto", background: "#0F172A" }}>
+          <pre style={{
+            margin: 0, padding: "16px 22px",
+            fontSize: 12, lineHeight: 1.7,
+            color: "#E2E8F0",
+            fontFamily: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+            whiteSpace: "pre-wrap", wordBreak: "break-word",
+          }}>{texto}</pre>
+        </div>
+
+        <div style={{ padding: "12px 18px", borderTop: "0.5px solid #e5e7eb", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <span style={{ fontSize: 11, color: "#64748B", marginRight: "auto" }}>
+            Cole no Teams, anexe no e-mail ou imprima como PDF.
+          </span>
+          <Btn small onClick={copiar}>{copiado ? "Copiado ✓" : "Copiar texto"}</Btn>
+          <Btn small onClick={baixarTxt}>{baixado ? "Baixado ✓" : "Baixar .txt"}</Btn>
+          <Btn primary small onClick={imprimir}>Imprimir / Salvar como PDF</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── NAVEGADOR DE PERÍODO (HISTÓRICO) ─────────────────────────────────────────
+
+function HistoricoNavegador({ inicio, fim, setInicio, setFim, onExportar }) {
+  const presets = presetsPeriodo();
+  const chaveAtual = Object.keys(presets).find(k => presets[k].inicio === inicio && presets[k].fim === fim);
+
+  const aplicar = (p) => { setInicio(p.inicio); setFim(p.fim); };
+
+  const ordem = ["hoje", "ontem", "estaSemana", "semanaPass", "ultimos7", "mes"];
+
+  return (
+    <div style={{
+      background: "#fff", borderRadius: 16,
+      border: "0.5px solid #e5e7eb",
+      padding: "14px 16px",
+      marginBottom: "1.5rem",
+      display: "flex", flexDirection: "column", gap: 12,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="17" rx="2" />
+            <line x1="3" y1="9" x2="21" y2="9" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+          </svg>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#64748B", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            Período
+          </span>
+        </div>
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", flex: 1 }}>
+          {ordem.map(k => {
+            const p = presets[k];
+            const ativo = chaveAtual === k;
+            return (
+              <button
+                key={k}
+                onClick={() => aplicar(p)}
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 11.5, fontWeight: 500,
+                  padding: "5px 11px", borderRadius: 8,
+                  border: "0.5px solid " + (ativo ? "#111" : "#d0cfc8"),
+                  background: ativo ? "#111" : "transparent",
+                  color: ativo ? "#fff" : "#555",
+                  cursor: "pointer",
+                  transition: TRANSITION,
+                }}
+              >{p.label}</button>
+            );
+          })}
+        </div>
+        <button
+          onClick={onExportar}
+          style={{
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 12, fontWeight: 600,
+            padding: "7px 14px", borderRadius: 9,
+            border: "none", background: "#111", color: "#fff",
+            cursor: "pointer",
+            display: "inline-flex", alignItems: "center", gap: 6,
+            transition: TRANSITION,
+          }}
+          title="Gerar relatório completo com opções de copiar, .txt e PDF"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Exportar relatório
+        </button>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", paddingTop: 10, borderTop: "0.5px solid #f3f3f3" }}>
+        <span style={{ fontSize: 11, color: "#888", fontWeight: 500 }}>Customizado:</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <label style={{ fontSize: 11, color: "#64748B" }}>De</label>
+          <input
+            type="date"
+            value={inicio}
+            max={fim < toYMD(new Date()) ? fim : toYMD(new Date())}
+            onChange={e => setInicio(e.target.value || inicio)}
+            style={{
+              border: "0.5px solid #d0cfc8", borderRadius: 7,
+              padding: "5px 8px", fontSize: 12, color: "#111",
+              fontFamily: "'Inter', sans-serif", background: "#fff",
+              outline: "none",
+            }}
+          />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <label style={{ fontSize: 11, color: "#64748B" }}>Até</label>
+          <input
+            type="date"
+            value={fim}
+            min={inicio}
+            max={toYMD(new Date())}
+            onChange={e => setFim(e.target.value || fim)}
+            style={{
+              border: "0.5px solid #d0cfc8", borderRadius: 7,
+              padding: "5px 8px", fontSize: 12, color: "#111",
+              fontFamily: "'Inter', sans-serif", background: "#fff",
+              outline: "none",
+            }}
+          />
+        </div>
+        <span style={{ fontSize: 11, color: "#94A3B8", marginLeft: "auto" }}>
+          {rangeDeDias(inicio, fim).length} {rangeDeDias(inicio, fim).length === 1 ? "dia" : "dias"} no intervalo
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ── SEÇÃO: OBSERVAÇÕES DO CHECKLIST (USADA NO HISTÓRICO) ─────────────────────
+
+function SecaoObsChecklist({ dateKey, rotulo } = {}) {
+  const chave = dateKey || todayKey();
+  const ehHoje = chave === todayKey();
+  const [copiado, setCopiado] = useState(false);
+
+  const obs = (() => {
+    try {
+      const raw = localStorage.getItem("obs_" + chave);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  })();
+
+  const linhas = CHECKLIST.flatMap(bloco =>
+    bloco.items.map(item => ({
+      id: item.id,
+      tarefa: item.texto,
+      obs: (obs[item.id] || "").trim(),
+      hora: bloco.hora,
+      cor: bloco.cor,
+      bg: bloco.bg,
+      badge: bloco.badge,
+      bloco: bloco.label,
+    }))
+  ).filter(r => r.obs);
+
+  const rotuloData = rotulo || (ehHoje ? "hoje" : formatDataBR(chave));
+
+  const copiar = () => {
+    if (!linhas.length) return;
+    const texto = linhas.map(l => `Tarefa: ${l.tarefa} - Obs: ${l.obs}`).join("\n");
+    navigator.clipboard.writeText(texto).then(() => {
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    });
+  };
+
+  if (linhas.length === 0) {
+    return (
+      <div style={{
+        background: "#fff",
+        border: "0.5px dashed #d0cfc8",
+        borderRadius: 14,
+        padding: "20px 20px",
+        textAlign: "center",
+        fontSize: 13, color: "#888",
+      }}>
+        Nenhuma observação registrada no checklist {rotuloData === "hoje" ? "de hoje" : "em " + rotuloData}.
+        {ehHoje && (
+          <div style={{ fontSize: 11, color: "#aaa", marginTop: 4 }}>
+            Digite no campo <em>"O que você observou?"</em> de cada item no Painel para alimentar essa lista.
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 8, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 12, color: "#555" }}>
+          {linhas.length} observaç{linhas.length === 1 ? "ão" : "ões"} do checklist {rotuloData === "hoje" ? "de hoje" : "em " + rotuloData}
+        </span>
+        <button
+          onClick={copiar}
+          style={{
+            fontFamily: "'Inter', sans-serif", fontSize: 12, fontWeight: 500,
+            padding: "5px 12px", borderRadius: 9,
+            border: "0.5px solid " + (copiado ? "#166534" : "#d0cfc8"),
+            background: copiado ? "#DCFCE7" : "transparent",
+            color: copiado ? "#166534" : "#333",
+            cursor: "pointer",
+            display: "inline-flex", alignItems: "center", gap: 6,
+            transition: TRANSITION,
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+          {copiado ? "Copiado ✓" : "Copiar lista"}
+        </button>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {linhas.map(l => (
+          <div
+            key={l.id}
+            style={{
+              background: "#fff",
+              border: "0.5px solid #e5e7eb",
+              borderLeft: "3px solid " + l.cor,
+              borderRadius: 12,
+              padding: "10px 14px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: l.badge, color: l.cor, letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
+                {l.hora}
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: l.cor }}>{l.bloco}</span>
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#111", lineHeight: 1.4, marginBottom: 4 }}>
+              {l.tarefa}
+            </div>
+            <div style={{ fontSize: 12, color: "#333", lineHeight: 1.5, fontStyle: "italic", background: "#FFFBEB", padding: "6px 10px", borderRadius: 6 }}>
+              {l.obs}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── BLOCO DE NOTAS LATERAL FIXO ──────────────────────────────────────────────
+
+function AnotacoesLaterais() {
+  const [notas, setNotas] = useStorage("anotacoes_laterais", "");
+  const [aberto, setAberto] = useStorage("anotacoes_laterais_aberto", true);
+  const [salvoFlash, setSalvoFlash] = useState(false);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === "anotacoes_laterais" && e.newValue != null) {
+        try {
+          const v = JSON.parse(e.newValue);
+          if (typeof v === "string") setNotas(v);
+        } catch {}
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const onChange = (e) => {
+    setNotas(e.target.value);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setSalvoFlash(true);
+    timerRef.current = setTimeout(() => setSalvoFlash(false), 900);
+  };
+
+  const limpar = () => {
+    if (!notas) return;
+    if (confirm("Limpar todas as anotações? Essa ação não pode ser desfeita.")) {
+      setNotas("");
+    }
+  };
+
+  const copiar = () => {
+    if (!notas.trim()) return;
+    navigator.clipboard.writeText(notas);
+  };
+
+  const LARGURA = 300;
+  const LARGURA_FECHADO = 38;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 80,
+        right: 16,
+        bottom: 16,
+        width: aberto ? LARGURA : LARGURA_FECHADO,
+        zIndex: 50,
+        transition: "width 0.28s " + EASE,
+        display: "flex",
+        flexDirection: "column",
+        fontFamily: "'Inter', sans-serif",
+        pointerEvents: "none",
+      }}
+    >
+      <div
+        style={{
+          pointerEvents: "auto",
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          background: "#FFF9C4",
+          border: "0.5px solid #E5D97A",
+          borderRadius: 14,
+          boxShadow: aberto
+            ? "0 8px 24px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.06)"
+            : "0 2px 6px rgba(15, 23, 42, 0.08)",
+          overflow: "hidden",
+          transition: "box-shadow 0.28s " + EASE,
+        }}
+      >
+        <button
+          onClick={() => setAberto(!aberto)}
+          style={{
+            background: "#FBE96B",
+            border: "none",
+            borderBottom: aberto ? "0.5px solid #E5D97A" : "none",
+            padding: aberto ? "10px 12px" : "12px 0",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: aberto ? "space-between" : "center",
+            gap: 8,
+            fontFamily: "'Inter', sans-serif",
+            width: "100%",
+          }}
+          title={aberto ? "Recolher anotações" : "Expandir anotações"}
+        >
+          {aberto ? (
+            <>
+              <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7A5F00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="8" y1="13" x2="16" y2="13" />
+                  <line x1="8" y1="17" x2="13" y2="17" />
+                </svg>
+                <span style={{
+                  fontSize: 12, fontWeight: 600, color: "#7A5F00",
+                  letterSpacing: "-0.005em",
+                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                }}>
+                  Anotações de Reunião/Insights
+                </span>
+              </span>
+              <span style={{ fontSize: 16, color: "#7A5F00", lineHeight: 1, fontWeight: 500 }}>›</span>
+            </>
+          ) : (
+            <div style={{
+              writingMode: "vertical-rl",
+              transform: "rotate(180deg)",
+              fontSize: 11, fontWeight: 600, color: "#7A5F00",
+              letterSpacing: "0.05em", textTransform: "uppercase",
+              display: "flex", alignItems: "center", gap: 6,
+            }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7A5F00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: "rotate(180deg)" }}>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+              Anotações
+            </div>
+          )}
+        </button>
+
+        {aberto && (
+          <>
+            <textarea
+              value={notas}
+              onChange={onChange}
+              placeholder="Descarregue pensamentos, insights de reunião, ideias soltas... tudo salva automaticamente."
+              style={{
+                flex: 1,
+                width: "100%",
+                boxSizing: "border-box",
+                border: "none",
+                outline: "none",
+                padding: "12px 14px",
+                fontSize: 13,
+                lineHeight: 1.6,
+                color: "#3B2F00",
+                fontFamily: "'Inter', sans-serif",
+                background: "transparent",
+                resize: "none",
+              }}
+            />
+            <div style={{
+              padding: "8px 10px",
+              borderTop: "0.5px solid #E5D97A",
+              background: "rgba(255, 249, 196, 0.6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 6,
+            }}>
+              <span style={{
+                fontSize: 10, fontWeight: 500, color: "#7A5F00",
+                opacity: salvoFlash ? 1 : 0.55,
+                transition: "opacity 0.3s " + EASE,
+              }}>
+                {salvoFlash ? "salvando…" : notas ? "salvo · " + notas.length + " caracteres" : "auto-save ativo"}
+              </span>
+              <div style={{ display: "flex", gap: 4 }}>
+                <button
+                  onClick={copiar}
+                  disabled={!notas.trim()}
+                  style={{
+                    fontSize: 10.5, fontWeight: 500,
+                    padding: "3px 9px", borderRadius: 6,
+                    border: "0.5px solid #D4C75A",
+                    background: "transparent",
+                    color: notas.trim() ? "#7A5F00" : "#C4B56A",
+                    cursor: notas.trim() ? "pointer" : "default",
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                >
+                  Copiar
+                </button>
+                <button
+                  onClick={limpar}
+                  disabled={!notas}
+                  style={{
+                    fontSize: 10.5, fontWeight: 500,
+                    padding: "3px 9px", borderRadius: 6,
+                    border: "0.5px solid #D4C75A",
+                    background: "transparent",
+                    color: notas ? "#7A5F00" : "#C4B56A",
+                    cursor: notas ? "pointer" : "default",
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                >
+                  Limpar
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── HISTÓRICO (VIEW) ─────────────────────────────────────────────────────────
+
+function HistoricoView({ registros, setRegistros, status, historico, registrosMes, pctPleno, plenoMet, impactosMes, META_PLENO }) {
+  const hojeYMD = toYMD(new Date());
+  const [inicio, setInicio] = useStorage("hist_periodo_inicio", hojeYMD);
+  const [fim, setFim] = useStorage("hist_periodo_fim", hojeYMD);
+  const [modalAberto, setModalAberto] = useState(false);
+
+  useEffect(() => {
+    if (inicio > fim) setFim(inicio);
+  }, [inicio]);
+
+  const dias = rangeDeDias(inicio, fim);
+  const ehUmDia = inicio === fim;
+  const filtroData = (r) => {
+    const ymd = toYMD(new Date(r.id));
+    return ymd >= inicio && ymd <= fim;
+  };
+  const rotuloPeriodo = ehUmDia
+    ? (inicio === hojeYMD ? "hoje" : formatDataBR(inicio))
+    : `${formatDataBR(inicio)} – ${formatDataBR(fim)}`;
+
+  const obsLinhasPorDia = dias.map(ymd => {
+    const obs = lerObsData(ymd);
+    const temObs = Object.values(obs).some(v => (v || "").trim());
+    return { ymd, temObs };
+  });
+  const algumaObs = obsLinhasPorDia.some(d => d.temObs);
+
+  return (
+    <div>
+      <div style={{ marginBottom: "2rem", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 220 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
+            <span style={{ fontSize: 11, fontWeight: 500, color: plenoMet ? "#8A6A10" : "#888", letterSpacing: "0.01em" }}>
+              Evolução para Pleno{plenoMet ? " · meta do mês atingida" : ""}
+            </span>
+            <span style={{ fontSize: 11, color: plenoMet ? "#8A6A10" : "#bbb" }}>
+              {registrosMes} de {META_PLENO} registros este mês
+            </span>
+          </div>
+          <div style={{ height: 3, background: "#ececec", borderRadius: 2 }}>
+            <div style={{ height: 3, width: pctPleno + "%", background: plenoMet ? "#D4AF37" : "#534AB7", borderRadius: 2, transition: "width 0.4s " + EASE + ", background 0.3s " + EASE }} />
+          </div>
+        </div>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "8px 14px", borderRadius: 12,
+          background: impactosMes > 0 ? "#DDF1F1" : "#F1EFE8",
+          border: "0.5px solid " + (impactosMes > 0 ? "#9FD4D4" : "#e0deda"),
+        }}>
+          <div style={{
+            fontSize: 22, fontWeight: 600,
+            color: impactosMes > 0 ? "#0C6170" : "#bbb",
+            lineHeight: 1, fontVariantNumeric: "tabular-nums",
+            letterSpacing: "-0.02em",
+          }}>{impactosMes}</div>
+          <div style={{
+            fontSize: 10, fontWeight: 600,
+            color: impactosMes > 0 ? "#0C6170" : "#888",
+            lineHeight: 1.2, letterSpacing: "0.03em", textTransform: "uppercase",
+          }}>impactos<br/>no mês</div>
+        </div>
+      </div>
+
+      <HistoricoNavegador
+        inicio={inicio}
+        fim={fim}
+        setInicio={setInicio}
+        setFim={setFim}
+        onExportar={() => setModalAberto(true)}
+      />
+
+      <div style={{ background: "#FFFBEB", borderRadius: 20, padding: "20px 20px 24px", border: "0.5px solid #FDE68A", marginBottom: "1.5rem" }}>
+        <SecaoHeader
+          title={ehUmDia ? `Observações do checklist · ${rotuloPeriodo}` : "Observações do checklist no período"}
+          subtitle="Tudo que você digitou nos campos 'O que você observou?' aparece aqui automaticamente"
+        />
+        {ehUmDia ? (
+          <SecaoObsChecklist dateKey={inicio} />
+        ) : !algumaObs ? (
+          <div style={{
+            background: "#fff", border: "0.5px dashed #d0cfc8",
+            borderRadius: 14, padding: "24px 20px", textAlign: "center",
+            fontSize: 13, color: "#888",
+          }}>
+            Nenhuma observação registrada nos dias selecionados.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            {obsLinhasPorDia.filter(d => d.temObs).map(({ ymd }) => (
+              <div key={ymd}>
+                <div style={{
+                  fontSize: 12, fontWeight: 600,
+                  color: "#7A5F00", marginBottom: 8,
+                  padding: "4px 10px", borderRadius: 6,
+                  background: "#FEF3C7",
+                  display: "inline-block",
+                  letterSpacing: "-0.005em",
+                }}>
+                  {formatDataLongaBR(ymd)}
+                </div>
+                <SecaoObsChecklist dateKey={ymd} rotulo={formatDataBR(ymd)} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div style={{ background: "#EFF6FF", borderRadius: 20, padding: "20px 20px 24px", border: "0.5px solid #DBEAFE" }}>
+        <SecaoHeader
+          title={ehUmDia ? `Timeline de impacto · ${rotuloPeriodo}` : "Timeline de impacto no período"}
+          subtitle="Feed dos registros do diário · filtrado pelo período selecionado"
+        />
+        <SecaoDiario
+          registros={registros}
+          setRegistros={setRegistros}
+          status={status}
+          historico={historico}
+          filtroData={filtroData}
+          rotuloPeriodo={rotuloPeriodo}
+          ocultarForm
+        />
+      </div>
+
+      {modalAberto && (
+        <RelatorioModal
+          inicio={inicio}
+          fim={fim}
+          registros={registros}
+          onClose={() => setModalAberto(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── APP ──────────────────────────────────────────────────────────────────────
+
+function App() {
+  const [view, setView] = useStorage("app_view", "painel"); // painel | analise | historico
+  const [registros, setRegistros] = useStorage("diario_registros", []);
+  const [status, setStatus] = useStorage("status_rapido", { venda: "", meta: "" });
+  const [historico, setHistorico] = useStorage("historicoVendas", []);
+  const vendaHoje = parseBRL(status.venda);
+  const hoje = todayKey();
+  // Fonte única de verdade para checklist (done) e observações (obs) do dia.
+  // Todas as instâncias de <SecaoChecklist> leem e gravam através destes setters,
+  // o que elimina a race condition que fazia obs sumirem entre seções.
+  const [checklistDone, setChecklistDone] = useStorage("chk_" + hoje, {});
+  const [checklistObs, setChecklistObs] = useStorage("obs_" + hoje, {});
+  const [queriesUsadas, setQueriesUsadas] = useStorage("queries_usadas_" + hoje, {});
+  const secAtiva = secaoAgora();
+  const total = CHECKLIST.reduce((s, b) => s + b.items.length, 0);
+  const count = Object.values(checklistDone).filter(Boolean).length;
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+
+  const agora = new Date();
+  const registrosMesArr = registros.filter(r => {
+    const d = new Date(r.id);
+    return d.getMonth() === agora.getMonth() && d.getFullYear() === agora.getFullYear();
+  });
+  const registrosMes = registrosMesArr.length;
+  const impactosMes = registrosMesArr.filter(r => typeof r.impacto === "number").length;
+  const META_PLENO = 20;
+  const pctPleno = Math.min(100, Math.round((registrosMes / META_PLENO) * 100));
+  const plenoMet = registrosMes >= META_PLENO;
+
+  const viewTitle = view === "painel" ? "Painel de Controle"
+    : view === "analise" ? "Análise de Dados"
+    : view === "semana" ? "Planejamento da Semana"
+    : "Histórico de Impacto";
+
+  const [agoraTick, setAgoraTick] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setAgoraTick(Date.now()), 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+  const hojeDateStr = new Date(agoraTick).toDateString();
+  const temImpactoHoje = registros.some(r =>
+    typeof r.impacto === "number" && new Date(r.id).toDateString() === hojeDateStr
+  );
+  const pendenciaImpacto = new Date(agoraTick).getHours() >= 16 && !temImpactoHoje;
+
+  return (
+    <div style={{ fontFamily: "'Inter', sans-serif", background: "#F8FAFC", minHeight: "100vh" }}>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+      <Sidebar view={view} setView={setView} pendenciaImpacto={pendenciaImpacto} />
+
+      <div style={{ paddingLeft: 72, paddingRight: 340 }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "1.75rem 1.5rem 7rem" }}>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: 14 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 600, color: "#111", margin: 0, letterSpacing: "-0.02em" }}>{viewTitle}</h1>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: pct === 100 ? "#639922" : count > 0 ? "#534AB7" : "#ccc" }} />
+              <span style={{ fontSize: 12, color: "#888", fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>{count}/{total} · {pct}%</span>
+            </div>
+          </div>
+
+          {view === "painel" && (
+            <div>
+              <Cockpit status={status} setStatus={setStatus} setHistorico={setHistorico} compact />
+
+              {SECOES.map((sec) => {
+                const ativa = sec.id === secAtiva;
+                const blocosSet = sec.blocos;
+                return (
+                  <section
+                    key={sec.id}
+                    style={{
+                      opacity: ativa ? 1 : 0.3,
+                      filter: ativa ? "none" : "saturate(0.8)",
+                      transition: "opacity 0.3s " + EASE + ", filter 0.3s " + EASE,
+                      marginBottom: 28,
+                      padding: "24px 28px 28px",
+                      background: "#fff",
+                      border: "0.5px solid " + (ativa ? sec.accent : "#e5e7eb"),
+                      borderLeft: "4px solid " + sec.accent,
+                      borderRadius: 18,
+                      boxShadow: ativa ? "0 4px 16px rgba(15, 23, 42, 0.06)" : "none",
+                    }}
+                    onMouseEnter={(e) => { if (!ativa) { e.currentTarget.style.opacity = 0.7; } }}
+                    onMouseLeave={(e) => { if (!ativa) { e.currentTarget.style.opacity = 0.3; } }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18, flexWrap: "wrap" }}>
+                      <span style={{
+                        fontSize: 13, fontWeight: 700,
+                        padding: "5px 12px", borderRadius: 8,
+                        background: sec.bg, color: sec.accent,
+                        letterSpacing: "0.02em",
+                        fontVariantNumeric: "tabular-nums",
+                      }}>{sec.horario}</span>
+                      <h2 style={{
+                        fontSize: 18, fontWeight: 600, color: "#111",
+                        margin: 0, letterSpacing: "-0.02em",
+                      }}>{sec.titulo}</h2>
+                      {ativa && (
+                        <span style={{
+                          fontSize: 10, fontWeight: 700,
+                          padding: "3px 9px", borderRadius: 999,
+                          background: sec.accent, color: "#fff",
+                          letterSpacing: "0.06em", textTransform: "uppercase",
+                        }}>agora</span>
+                      )}
+                    </div>
+
+                    <QueriesFaseList
+                      queryIds={sec.queries}
+                      usadas={queriesUsadas}
+                      setUsadas={setQueriesUsadas}
+                      ativa={ativa}
+                    />
+
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 12 }}>
+                      Checklist
+                    </div>
+                    <SecaoChecklist
+                      filterBloco={(b) => blocosSet.indexOf(b.hora) !== -1}
+                      minimal
+                      usadas={queriesUsadas}
+                      setUsadas={setQueriesUsadas}
+                      done={checklistDone}
+                      setDone={setChecklistDone}
+                      obs={checklistObs}
+                      setObs={setChecklistObs}
+                    />
+
+                    {sec.incluiDiario && (
+                      <div style={{ marginTop: 24 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 12 }}>
+                          Diário de Impacto
+                        </div>
+                        <SecaoDiario registros={registros} setRegistros={setRegistros} status={status} historico={historico} />
+                      </div>
+                    )}
+                  </section>
+                );
+              })}
+            </div>
+          )}
+
+          {view === "analise" && (
+            <div>
+              <InsightsLuma venda={vendaHoje} historico={historico} />
+
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))",
+                gap: 64,
+                alignItems: "start",
+              }}>
+                <div style={{ minWidth: 0, background: "#EFF6FF", borderRadius: 20, padding: "20px 20px 24px", border: "0.5px solid #DBEAFE" }}>
+                  <SecaoHeader title="Queries SQL" subtitle="Entrada de dados · extrai o que precisa saber" />
+                  <SecaoQueries />
+                </div>
+                <div style={{ minWidth: 0, background: "#EFF6FF", borderRadius: 20, padding: "20px 20px 24px", border: "0.5px solid #DBEAFE" }}>
+                  <SecaoHeader title="Daily Pulse" subtitle="Síntese · transforma dado em narrativa para o Teams" />
+                  <SecaoPulse />
+                </div>
+                <div style={{ minWidth: 0, background: "#F9FAFB", borderRadius: 20, padding: "20px 20px 24px", border: "0.5px solid #E2E8F0" }}>
+                  <SecaoHeader title="Top SKUs Curva A" subtitle="SKUs prioritários · Eletro e Metais" />
+                  <SecaoTopSKUs />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {view === "semana" && (
+            <div>
+              <div style={{ background: "#EEEDFE", borderRadius: 20, padding: "20px 20px 24px", border: "0.5px solid #CECBF6" }}>
+                <SecaoHeader title="Agenda da semana" subtitle="Rituais, reuniões e foco de cada dia · clique para expandir" />
+                <SecaoSemana />
+              </div>
+            </div>
+          )}
+
+          {view === "historico" && (
+            <HistoricoView
+              registros={registros}
+              setRegistros={setRegistros}
+              status={status}
+              historico={historico}
+              registrosMes={registrosMes}
+              pctPleno={pctPleno}
+              plenoMet={plenoMet}
+              impactosMes={impactosMes}
+              META_PLENO={META_PLENO}
+            />
+          )}
+
+        </div>
+      </div>
+
+      <AnotacoesLaterais />
+
+      <DiarioFooter registros={registros} setRegistros={setRegistros} impactosMes={impactosMes} status={status} />
+    </div>
+  );
+}
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+    </script>
+</body>
+</html>
