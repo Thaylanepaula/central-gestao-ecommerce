@@ -59,7 +59,7 @@ const CHECKLIST = [
     items: [
       { id: "c_im1", texto: "Comparar preço do Top 1 SKU com a Amazon", hint: "Entrar no PDP da Amazon, bater com o nosso. Diferença > 3%? → print + acionar comprador com screenshot." },
       { id: "c_im2", texto: "Frete do concorrente está mais agressivo em Recife?", hint: "CEP PE no checkout deles. Se chega mais rápido ou mais barato → registra no diário, pauta de logística." },
-      { id: "c_im3", texto: "Banner da categoria de Beleza está ativo na home?", hint: "Confere home + categoria. Se caiu → aciona MKT direto, não espera o weekly." },
+      { id: "c_im3", texto: "Banner da categoria está ativo na home?", hint: "Confere home + categoria. Se caiu → aciona MKT direto, não espera o weekly." },
     ]
   },
   {
@@ -513,6 +513,223 @@ function SecaoDiario() {
   );
 }
 
+// ── SEÇÃO: INTELIGÊNCIA ───────────────────────────────────────────────────────
+
+const parseAnthropicJson = (rawText) => {
+  if (!rawText) return null;
+  const txt = String(rawText).trim();
+  try { return JSON.parse(txt); } catch {}
+  const fenced = txt.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced?.[1]) {
+    try { return JSON.parse(fenced[1]); } catch {}
+  }
+  const first = txt.indexOf("{");
+  const last = txt.lastIndexOf("}");
+  if (first >= 0 && last > first) {
+    try { return JSON.parse(txt.slice(first, last + 1)); } catch {}
+  }
+  return null;
+};
+
+const toBRL = (v) => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return v || "-";
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n);
+};
+
+function SecaoInteligencia() {
+  const [sqlResultado, setSqlResultado] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState("");
+  const [diagnostico, setDiagnostico] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  const analisar = async () => {
+    const apiKey = (window.ANTHROPIC_API_KEY || localStorage.getItem("anthropic_api_key") || "").trim();
+    if (!sqlResultado.trim()) {
+      setErro("Cole o resultado da query SQL para analisar.");
+      return;
+    }
+    if (!apiKey) {
+      setErro("Defina a chave da Anthropic em window.ANTHROPIC_API_KEY ou localStorage('anthropic_api_key').");
+      return;
+    }
+
+    setLoading(true);
+    setErro("");
+    setDiagnostico(null);
+
+    const systemPrompt = "Você é um analista sênior de inteligência comercial em e-commerce. Responda APENAS JSON válido sem markdown, sem texto extra e sem comentários. Estrutura obrigatória: {\"tipo\":\"\",\"total_faturamento\":0,\"top_sku\":{\"nome\":\"\",\"valor\":0,\"comprador\":\"\"},\"carteira_destaque\":{\"nome\":\"\",\"valor\":0},\"carteira_travando\":{\"nome\":\"\",\"valor\":0,\"motivo\":\"\"},\"alertas_ruptura\":[],\"resumo\":\"\",\"pulse\":\"\"}.";
+
+    try {
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 2000,
+          system: systemPrompt,
+          messages: [{
+            role: "user",
+            content: `Analise o resultado bruto abaixo, normalize números em formato numérico e gere diagnóstico comercial em português:\n\n${sqlResultado}`
+          }]
+        })
+      });
+
+      if (!resp.ok) {
+        const msg = await resp.text();
+        throw new Error(msg || "Erro ao consultar Anthropic.");
+      }
+
+      const data = await resp.json();
+      const texto = data.content?.map((b) => b.text || "").join("\n").trim();
+      const parsed = parseAnthropicJson(texto);
+
+      if (!parsed) {
+        throw new Error("A IA não retornou JSON válido.");
+      }
+
+      setDiagnostico(parsed);
+    } catch (e) {
+      setErro(e?.message || "Falha ao analisar com IA.");
+    }
+    setLoading(false);
+  };
+
+  const copiarPulse = () => {
+    if (!diagnostico?.pulse) return;
+    navigator.clipboard.writeText(diagnostico.pulse).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  };
+
+  const acoesRecomendadas = diagnostico ? [
+    diagnostico.carteira_travando?.nome
+      ? `Acionar ${diagnostico.carteira_travando.nome} para plano de reversão imediato${diagnostico.carteira_travando.motivo ? ` (${diagnostico.carteira_travando.motivo})` : ""}.`
+      : null,
+    diagnostico.top_sku?.nome
+      ? `Priorizar disponibilidade e competitividade do SKU ${diagnostico.top_sku.nome}.`
+      : null,
+    Array.isArray(diagnostico.alertas_ruptura) && diagnostico.alertas_ruptura.length > 0
+      ? "Executar war-room de ruptura para os itens críticos ainda hoje."
+      : null,
+    diagnostico.carteira_destaque?.nome
+      ? `Replicar estratégia da carteira destaque (${diagnostico.carteira_destaque.nome}) nas demais carteiras.`
+      : null,
+  ].filter(Boolean) : [];
+
+  const cardStyle = { background: "#fff", border: "0.5px solid #e8e6e0", borderRadius: 14, padding: "12px 14px" };
+
+  return (
+    <div>
+      <div style={{ background: "#fff", border: "0.5px solid #e8e6e0", borderRadius: 14, overflow: "hidden", marginBottom: 14 }}>
+        <div style={{ background: "#F7F6F2", padding: "10px 16px", fontSize: 12, fontWeight: 500, color: "#888" }}>
+          Cole o resultado da query SQL copiado do DBeaver
+        </div>
+        <div style={{ padding: "14px 16px" }}>
+          <textarea
+            value={sqlResultado}
+            onChange={(e) => setSqlResultado(e.target.value)}
+            rows={10}
+            placeholder="Cole aqui o resultado da query..."
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              border: "0.5px solid #e0deda",
+              borderRadius: 10,
+              padding: "10px 12px",
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 13,
+              lineHeight: 1.6,
+              background: "#FAFAF8",
+              outline: "none",
+              resize: "vertical",
+              color: "#111",
+            }}
+          />
+        </div>
+        <div style={{ padding: "10px 16px", borderTop: "0.5px solid #f3f3f3", display: "flex", gap: 8, alignItems: "center" }}>
+          <Btn primary onClick={analisar} disabled={loading}>{loading ? "Analisando..." : "Analisar com IA ⚡"}</Btn>
+          {erro && <span style={{ fontSize: 12, color: "#A32D2D" }}>{erro}</span>}
+        </div>
+      </div>
+
+      {diagnostico && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div style={cardStyle}>
+              <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>Faturamento total</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: "#111" }}>{toBRL(diagnostico.total_faturamento)}</div>
+            </div>
+            <div style={cardStyle}>
+              <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>Top SKU</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>{diagnostico.top_sku?.nome || "-"}</div>
+              <div style={{ fontSize: 12, color: "#666" }}>
+                {toBRL(diagnostico.top_sku?.valor)} {diagnostico.top_sku?.comprador ? `· ${diagnostico.top_sku.comprador}` : ""}
+              </div>
+            </div>
+            <div style={cardStyle}>
+              <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>Carteira puxando</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#27500A" }}>{diagnostico.carteira_destaque?.nome || "-"}</div>
+              <div style={{ fontSize: 12, color: "#666" }}>{toBRL(diagnostico.carteira_destaque?.valor)}</div>
+            </div>
+            <div style={cardStyle}>
+              <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>Carteira travando</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#A32D2D" }}>{diagnostico.carteira_travando?.nome || "-"}</div>
+              <div style={{ fontSize: 12, color: "#666" }}>{toBRL(diagnostico.carteira_travando?.valor)}</div>
+              {diagnostico.carteira_travando?.motivo && (
+                <div style={{ fontSize: 11, color: "#A32D2D", marginTop: 4 }}>{diagnostico.carteira_travando.motivo}</div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ ...cardStyle, lineHeight: 1.7 }}>
+            <div style={{ fontSize: 11, color: "#888", marginBottom: 6, fontWeight: 600 }}>Resumo do diagnóstico</div>
+            <div style={{ fontSize: 13, color: "#111" }}>{diagnostico.resumo || "-"}</div>
+          </div>
+
+          {Array.isArray(diagnostico.alertas_ruptura) && diagnostico.alertas_ruptura.length > 0 && (
+            <div style={{ ...cardStyle, border: "0.5px solid #F09595", background: "#FCEBEB" }}>
+              <div style={{ fontSize: 11, color: "#A32D2D", marginBottom: 6, fontWeight: 700 }}>Alertas de ruptura</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {diagnostico.alertas_ruptura.map((a, i) => (
+                  <div key={i} style={{ fontSize: 13, color: "#791F1F", lineHeight: 1.5 }}>- {String(a)}</div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ ...cardStyle, overflow: "hidden", padding: 0 }}>
+            <div style={{ background: "#EAF3DE", padding: "10px 16px", fontSize: 12, fontWeight: 600, color: "#27500A" }}>Pulse gerado</div>
+            <div style={{ padding: "12px 16px", fontSize: 13, color: "#111", lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{diagnostico.pulse || "-"}</div>
+            <div style={{ padding: "10px 16px", borderTop: "0.5px solid #f3f3f3" }}>
+              <Btn primary onClick={copiarPulse}>{copied ? "✓ Copiado!" : "Copiar para Teams"}</Btn>
+            </div>
+          </div>
+
+          <div style={cardStyle}>
+            <div style={{ fontSize: 11, color: "#888", marginBottom: 8, fontWeight: 600 }}>Ações recomendadas</div>
+            {acoesRecomendadas.length === 0 ? (
+              <div style={{ fontSize: 13, color: "#666" }}>Sem ações automáticas para este diagnóstico.</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {acoesRecomendadas.map((acao, i) => (
+                  <div key={i} style={{ fontSize: 13, color: "#111", lineHeight: 1.5 }}>- {acao}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── SEÇÃO: DAILY PULSE ───────────────────────────────────────────────────────
 
 function SecaoPulse() {
@@ -786,6 +1003,7 @@ export default function App() {
 
       <div style={{ display: "flex", gap: 6, marginBottom: "1.5rem", flexWrap: "wrap" }}>
         <Tab label="Checklist" active={aba === "checklist"} onClick={() => setAba("checklist")} />
+        <Tab label="Inteligência" active={aba === "inteligencia"} onClick={() => setAba("inteligencia")} />
         <Tab label="Daily pulse" active={aba === "pulse"} onClick={() => setAba("pulse")} />
         <Tab label="Semana" active={aba === "semana"} onClick={() => setAba("semana")} />
         <Tab label="Diário" active={aba === "diario"} onClick={() => setAba("diario")} dot={registros.length === 0} />
@@ -793,6 +1011,7 @@ export default function App() {
       </div>
 
       {aba === "checklist" && <SecaoChecklist />}
+      {aba === "inteligencia" && <SecaoInteligencia />}
       {aba === "pulse" && <SecaoPulse />}
       {aba === "semana" && <SecaoSemana />}
       {aba === "diario" && <SecaoDiario />}
