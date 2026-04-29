@@ -59,7 +59,7 @@ const CHECKLIST = [
     items: [
       { id: "c_im1", texto: "Comparar preço do Top 1 SKU com a Amazon", hint: "Entrar no PDP da Amazon, bater com o nosso. Diferença > 3%? → print + acionar comprador com screenshot." },
       { id: "c_im2", texto: "Frete do concorrente está mais agressivo em Recife?", hint: "CEP PE no checkout deles. Se chega mais rápido ou mais barato → registra no diário, pauta de logística." },
-      { id: "c_im3", texto: "Banner da categoria está ativo na home?", hint: "Confere home + categoria. Se caiu → aciona MKT direto, não espera o weekly." },
+      { id: "c_im3", texto: "Banner da categoria de Beleza está ativo na home?", hint: "Confere home + categoria. Se caiu → aciona MKT direto, não espera o weekly." },
     ]
   },
   {
